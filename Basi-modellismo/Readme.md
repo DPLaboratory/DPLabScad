@@ -1,0 +1,1 @@
+Rendering: ciottoli e sterrato uniscono molte sfere, quindi con il motore CGAL il rendering finale (F6) può essere lento. In Preferenze → Funzionalità attiva Manifold, se la tua versione di OpenSCAD lo supporta, e diventa molto più rapido. Per lo sterrato puoi anche abbassare densita.
