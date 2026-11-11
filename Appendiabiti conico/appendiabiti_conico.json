@@ -1,0 +1,26 @@
+{
+    "fileFormatVersion": "1",
+    "parameterSets": {
+        "Camera da letto": {
+            "$fn": "120",
+            "L": "60",
+            "back_t": "4",
+            "bead_out": "0.65000000000000002",
+            "cap_gap": "0.25",
+            "cap_t": "1.6000000000000001",
+            "clr": "0.10000000000000001",
+            "d_head": "50",
+            "d_neck": "20",
+            "g_flat": "0.59999999999999998",
+            "head_d": "9",
+            "n_slits": "4",
+            "neck_len": "6",
+            "part": "print",
+            "rim": "6",
+            "screw_d": "4",
+            "skirt_th": "1.2",
+            "slit_w": "1",
+            "wall": "4"
+        }
+    }
+}
