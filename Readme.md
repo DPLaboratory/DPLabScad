@@ -15,6 +15,8 @@ Raccolta di modelli parametrici in **OpenSCAD** (progetto DPLab).
 
 ## KeyCaps — Keycap low-profile Cherry MX
 
+![Keycap low-profile Cherry MX — set completo](KeyCaps/Lowprofile/DPL_keycap_mx_low_profile.png)
+
 **File:** `KeyCaps/Lowprofile/DPL_keycap_mx_low_profile.scad`
 STL pronto: `KeyCaps/STL/DPL_keycap_Flat_low_profile_x12.stl`
 
@@ -33,6 +35,8 @@ Caratteristiche principali:
 
 ## KickStand — cerniera print-in-place
 
+![Kickstand con cerniera print-in-place](KickStand/kickstand_hinge_print_in_place.png)
+
 **File:** `KickStand/kickstand_hinge_print_in_place.scad`
 
 Kickstand parametrico con cerniera ad asse verticale (H = 12 mm) che si stampa in piedi, senza supporti — ispirato a *MakerWorld #1607317* e ricostruito dall'analisi di mesh STL.
@@ -49,6 +53,8 @@ Tutte le quote principali sono esposte come parametri modulabili (sezioni `[Pias
 
 ## Appendiabiti conico — vite nascosta + tappo a scatto
 
+![Appendiabiti conico — corpo e tappo in posizione di stampa](Appendiabiti%20conico/appendiabiti_conico.png)
+
 **File:** `Appendiabiti conico/appendiabiti_conico.scad`
 
 Appendiabiti da parete a forma di cono (cavo), stile Yconic: la vite rimane nascosta dentro il corpo e si accede dal fronte.
@@ -60,6 +66,8 @@ Appendiabiti da parete a forma di cono (cavo), stile Yconic: la vite rimane nasc
 - Stampa senza supporti: il corpo va a faccia frontale in basso (la gola non resta in sbalzo).
 
 ## Basi-modellismo — basi rotonde per miniature
+
+![Base Ø32 con superficie a mattoni](Basi-modellismo/basi_miniature.png)
 
 **File:** `Basi-modellismo/basi_miniature.scad`
 
@@ -76,13 +84,19 @@ Basi rotonde parametriche per miniature da wargame/terrain, con superficie selez
 
 Cartella `Label/` con due varianti, entrambe divise in due parti/colori (`"base"` = piastra, `"detail"` = testo + bordi) pensate per la stampa 3D multicolore (export 3MF da `part = "all"`, oppure esportare le due parti separatamente e unirle nello slicer):
 
+![Label rettangolare bicolore](Label/label_rettangolare.png)
+
 **`label_rettangolare.scad`** — rettangolo con angoli arrotondati, bordo superiore smussato, cornice a linea (`frame_dist`, `frame_w`) e testo centrato a filo con la superficie (modalità `inlay`, consigliata) o in rilievo. Testo multi-riga con auto-fit opzionale (`fit_text`).
 
 **`label_ornamentale.scad`** — rettangolo con angoli concavi (`notch_r`), doppio bordo (linea sottile + linea spessa) e giglio decorativo opzionale in alto al centro (`giglio`, `show_ornament`). Stesse opzioni di testo e `inlay` della versione rettangolare.
 
+![Label ornamentale bicolore](Label/label_ornamentale.png)
+
 I file `.json` nella cartella sono preset del Customizer (insiemi di parametri salvati).
 
 ## SD Mirco Holder Combined — organizer SD / microSD / USB
+
+![Porta SD / microSD / USB 3×1 — vani interni evidenziati](SD%20Mirco%20Holder%20Combined/SD_MircoSD_USB_Holder_Combined.png)
 
 **File:** `SD Mirco Holder Combined/SD_MircoSD_USB_Holder_Combined.scad`
 
