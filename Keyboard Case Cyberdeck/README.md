@@ -222,15 +222,31 @@ Per un video più fluido aumenta `--animate` (es. 24 → 192 frame) e
 
 ### 5.4 GIF già pronte nel progetto
 
-Nella cartella sono incluse due GIF generate con la CLI di OpenSCAD
-(2026.09.07, `C:\Users\debora.presti\Software\OpenSCAD-2026.09.07-x86-64\openscad.exe`):
+Nel progetto sono incluse due GIF (cartella [`img/`](img/)) generate con la CLI
+di OpenSCAD (2026.09.07,
+`C:\Users\debora.presti\Software\OpenSCAD-2026.09.07-x86-64\openscad.exe`).
+
+**Funzionamento — apertura 0→1 e tablet che scorre fino al fermo**
+(fasi 7–8, `animazione = "apri"`, 48 frame @ 800×600):
+
+![Apertura della cerniera a quadrilatero articolato e tablet che scorre fino al fermo](img/animazione_apertura.gif)
+
+**Montaggio completo nelle otto fasi** — tastiera, orecchie, coperchio,
+bielle, perni, apertura, tablet
+(`animazione = "tutto"`, 96 frame @ 640×480):
+
+![Montaggio completo nelle otto fasi](img/animazione_completa.gif)
 
 | File | Contenuto | Frame |
 |---|---|---|
-| `animazione_apertura.gif` | fasi 7–8 (`animazione = "apri"`): apertura 0→1 e tablet al fermo | 48 @ 800×600 |
-| `animazione_completa.gif` | tutte le 8 fasi (`animazione = "tutto"`): montaggio + apertura | 96 @ 640×480 |
+| `img/animazione_apertura.gif` | fasi 7–8 (`animazione = "apri"`): apertura 0→1 e tablet al fermo | 48 @ 800×600 |
+| `img/animazione_completa.gif` | tutte le 8 fasi (`animazione = "tutto"`): montaggio + apertura | 96 @ 640×480 |
 
-Procedura usata per rigenerarle:
+> Le GIF si vedono in anteprima su GitHub/GitLab e in qualunque visualizzatore
+> Markdown che supporti le immagini animate; si vedono anche in VS Code
+> (Markdown Preview).
+
+Procedura usata per rigenerarle (output in `img/`):
 
 1. si crea una **copia temporanea** del `.scad` con `animazione` impostato
    (`"apri"` o `"tutto"`; così si evitano problemi di quoting di `-D` su
@@ -241,12 +257,12 @@ Procedura usata per rigenerarle:
    ```
    → produce `apri00000.png … apri00047.png`;
 3. si assembla la GIF con PIL (loop infinito, ~17 fps, pausa finale sullo
-   stato concluso):
+   stato concluso) e la si salva in `img/`:
    ```python
    from PIL import Image
    files = sorted(glob.glob("apri0*.png"))
    imgs  = [Image.open(f).convert("RGB") for f in files]
-   imgs[0].save("animazione_apertura.gif", save_all=True,
+   imgs[0].save("img/animazione_apertura.gif", save_all=True,
                 append_images=imgs[1:], duration=[60]*len(imgs), loop=0,
                 optimize=True)
    ```
