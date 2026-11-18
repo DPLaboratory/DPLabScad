@@ -139,6 +139,25 @@ porta_foro_d  = 10;                // larghezza foro pollice lungo X [mm]
 porta_foro_dx = 8;                 // distanza foro pollice dal bordo frontale [mm]
 porta_x = D_kb + open_dx + (Lu - wall_f - D_kb - open_dx)/2; // centro portellino
 
+// Fissaggio coperchio-orecchio: fori passanti per viti o perni, in aggiunta
+// alla colla del tenone (2 fori per orecchio, nella fascia dell'orecchio).
+// Il foro attraversa piastra + tenone + corpo dell'orecchio (esce in basso):
+// si puo' usare un perno da vit_d mm (gli stessi della cerniera) incollato,
+// oppure una vite passante con dado sotto l'orecchio. Con vit_svaso > 0 si
+// ottiene il sedile per testa conica (es. M3: vit_d=3, vit_svaso=1.6).
+// Nota: sopra il tenone la piastra resta sottile (t_lid - prof_poch), quindi
+// consigliate testa cilindrica + rondella, non testa svasata profonda.
+usa_viti_orecchio = true;  // abilita i fori passanti coperchio-orecchio
+vit_d     = 3;             // diametro nominale vite/perno [mm]
+vit_gioco = 0.2;           // gioco del foro [mm]
+vit_svaso = 0;             // profondita' svaso sulla faccia tablet [mm], 0 = no
+vit_svaso_d = 6.5;         // diametro svaso [mm]
+
+vit_foro = vit_d + vit_gioco;                     // diametro effettivo del foro
+vit_u1 = lp1_u + (lp2_u - lp1_u)/4;               // foro 1 lungo il tenone
+vit_u2 = lp2_u - (lp2_u - lp1_u)/4;               // foro 2 lungo il tenone
+vit_y0 = Wl/2 - ear_t/2;                          // centro della fascia orecchio
+
 assert(abs(Ye1 - Wl/2) < 1e-6, "i livelli Y non tornano con Wl");
 assert(lp2_u > lp1_u && piv_v > ear_r, "geometria orecchio non valida");
 assert(!porta_aperta || porta_t < rear_top,
@@ -151,6 +170,12 @@ assert(!porta_aperta || porta_w/2 + porta_lip <= Wi/2 - 1,
 assert(!porta_aperta || (porta_foro_dx + porta_foro_d < porta_l - 2*porta_gioco &&
                          porta_foro_l < porta_w - 2*porta_lip),
        "foro pollice fuori dal portellino");
+assert(!usa_viti_orecchio || vit_foro <= ear_t - 0.8,
+       "foro di fissaggio troppo largo per lo spessore dell'orecchio");
+assert(!usa_viti_orecchio || (vit_u1 > lp1_u && vit_u2 < lp2_u),
+       "fori di fissaggio fuori dal tenone");
+assert(vit_svaso == 0 || vit_svaso < t_lid,
+       "svaso piu' profondo dello spessore del coperchio");
 
 // ------------------ CINEMATICA 2D NEL PIANO (x, z) -------------------------
 // Il coperchio vive in un riferimento locale (u, v): u lungo il coperchio a
@@ -331,6 +356,17 @@ module coperchio_solido() {
         for (sy = [-1, 1])
             translate([lp1_u - g, sy > 0 ? Wl/2 - ear_t : -Wl/2, -1])
                 cube([lp2_u - lp1_u + 2*g, ear_t, prof_poch + 1]);
+        // fori passanti di fissaggio orecchie: attraversano la piastra e, a
+        // montaggio fatto, proseguono nel tenone/corpo dell'orecchio
+        if (usa_viti_orecchio)
+            for (sy = [-1, 1], u_i = [vit_u1, vit_u2]) {
+                translate([u_i, sy*vit_y0, -1])
+                    cylinder(h = t_lid + 2, d = vit_foro);
+                if (vit_svaso > 0)
+                    translate([u_i, sy*vit_y0, t_lid - vit_svaso])
+                        cylinder(h = vit_svaso + 1, d1 = vit_foro,
+                                 d2 = vit_svaso_d);
+            }
     }
 }
 
@@ -396,11 +432,30 @@ module zona_libera_2d(B, lp, L) {
     }
 }
 
+// orecchio solido 3D: profilo estruso lungo Y + fori passanti di fissaggio
+// lungo v (perni/viti coperchio-orecchio). Nel frame locale l'orecchio occupa
+// Y in [-ear_t, 0] e Z = v; i fori passano da sotto il corpo (v = -piv_v-ear_r)
+// fino oltre la faccia del tablet (v = t_lid), con eventuale svaso in cima.
+module orecchio_solido() {
+    difference() {
+        estrusa_y(ear_t) profilo_orecchio();
+        if (usa_viti_orecchio)
+            for (u_i = [vit_u1, vit_u2]) {
+                translate([u_i, -ear_t/2, -piv_v - ear_r])
+                    cylinder(h = piv_v + ear_r + t_lid + 1, d = vit_foro);
+                if (vit_svaso > 0)
+                    translate([u_i, -ear_t/2, t_lid - vit_svaso])
+                        cylinder(h = vit_svaso + 1, d1 = vit_foro,
+                                 d2 = vit_svaso_d);
+            }
+    }
+}
+
 // orecchio in posa: nel riferimento coperchio, fascia Y esterna di ciascun lato
 module orecchio_in_posa(t, sy, off_y = 0)
     color("Goldenrod") in_coperchio(t)
         translate([0, sy*Wl/2 + (sy > 0 ? 0 : ear_t) + sy*off_y, 0])
-            estrusa_y(ear_t) profilo_orecchio();
+            orecchio_solido();
 
 // ------------------------------- 4. BIELLE ---------------------------------
 // Profilo a fessura: inviluppo di due cerchi diametro link_w, fori per i perni.
@@ -491,7 +546,7 @@ module orecchio_stampa(sy)
     color("Goldenrod")
         translate([ps_x_orecchio - (lp1_u - ear_r), sy*(ear_t/2 + 10),
                    piv_v + ear_r])
-            estrusa_y(ear_t) profilo_orecchio();
+            orecchio_solido();
 module biella_stampa(tipo, sy)
     color("OrangeRed")
         translate([tipo == 1 ? ps_x_biella1 : ps_x_biella2,

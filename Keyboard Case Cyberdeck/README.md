@@ -49,7 +49,9 @@ i perni P1/P2 collegano orecchio e biella.
 2. **coperchio** – piastra con fermo e guide per il tablet, tasche per le
    orecchie. Si stampa a faccia posteriore sul letto.
 3. **2 orecchie** – incollate nel coperchio (profilo = inviluppo di due cerchi
-   sui perni P1/P2 + tenone).
+   sui perni P1/P2 + tenone) e **fissate con 2 viti/perni Ø3 passanti per
+   ciascuna**: il foro attraversa piastra + tenone + corpo dell'orecchio
+   (`usa_viti_orecchio`).
 4. **2 biella1 + 2 biella2** – profilo a fessura con fori per i perni.
 
 Non stampati: **4 perni da 3 mm** (B1, B2, P1, P2 per lato) — barre, filo
@@ -105,6 +107,7 @@ VERIFICHE:  P2-biella1 = 9.9 (>=8) | B1-biella2 = 11.0 (>=8) |
 | Cerniera | `pin_d, link_t, ear_t, g, link_w, ear_r, ang_open, open_dx, lp1_u, lp2_u, piv_v, zb1, zb2` | la sintesi si ricalcola da sola |
 | Vano posteriore | `vano_d` | profondità interna: se cresce allunga la base |
 | Portellino | `porta_aperta, porta_l, porta_cornice, porta_w, porta_t, porta_lip, porta_gioco, porta_foro_l, porta_foro_d, porta_foro_dx, porta_x` | a incasso, a filo, con foro pollice |
+| Fissaggio orecchie | `usa_viti_orecchio, vit_d, vit_gioco, vit_svaso, vit_svaso_d` | fori passanti viti/perni Ø3 tra coperchio e orecchie |
 | Magneti | `usa_magneti, mag_d, mag_h, mag_p1, mag_p2` | 4×2 mm, 2 per lato |
 | Vista | `mostra, animazione, t_manuale, camera_auto` | vedi sotto |
 
@@ -299,9 +302,12 @@ vettore "su dello schermo" della camera gimbal (`R(vpr)·[0,1,0]`); se cambi
 - **Montaggio**:
   1. incolla le orecchie nelle tasche del coperchio (il tenone entra nella
      tasca; cianoacrilato o epossidica),
-  2. appoggia il coperchio chiuso sulla base: i fori di B1/B2 si allineano,
-  3. inserisci le bielle di lato nelle rispettive fasce Y,
-  4. spingi i **perni da 3 mm** dall'esterno (B1/B2 attraversano parete +
+  2. fissa ogni orecchio con **2 viti o perni Ø3 passanti** (`usa_viti_orecchio`):
+     il foro esce sotto l'orecchio, quindi si può usare un perno incollato o
+     una vite con dado (o autofilante in pressione nel foro Ø3.2),
+  3. appoggia il coperchio chiuso sulla base: i fori di B1/B2 si allineano,
+  4. inserisci le bielle di lato nelle rispettive fasce Y,
+  5. spingi i **perni da 3 mm** dall'esterno (B1/B2 attraversano parete +
      orecchio + biella; P1/P2 orecchio + biella).
 
 ---
