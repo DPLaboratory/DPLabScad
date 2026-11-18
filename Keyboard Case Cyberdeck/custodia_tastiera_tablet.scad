@@ -1,332 +1,592 @@
-/*
- * CUSTODIA PER TASTIERA MECCANICA CON COPERCHIO-SUPPORTO PER TABLET
- * ---------------------------------------------------------------
- * - Base (vassoio) che contiene la tastiera + vano posteriore (cavi / alloggio leveraggio)
- * - Coperchio che da chiuso protegge la tastiera e da aperto diventa il supporto del tablet
- * - Cerniera a QUADRILATERO ARTICOLATO (4 bar linkage) su ENTRAMBI i lati:
- *     il coperchio non ruota su un perno fisso, ma scorre all'indietro e si inclina,
- *     appoggiandosi dietro la tastiera (come nelle foto di riferimento).
- *
- * Il leveraggio e' calcolato con la sintesi a due posizioni (chiuso / aperto):
- *   scegli dove deve stare il coperchio da chiuso e da aperto, e gli assi dei
- *   perni della base vengono ricavati automaticamente.
- *
- * Strati lungo Y (da dentro verso fuori) su ogni lato:
- *   parete base | orecchio del coperchio | biella 1 | biella 2
- *
- * USO
- *   mostra = "assieme"  -> modello montato, con animazione ($t) oppure apertura fissa
- *   mostra = "stampa"   -> pezzi disposti in piano per la stampa
- *   mostra = "base" | "coperchio" | "orecchio" | "biella1" | "biella2"  -> singolo pezzo (per export STL)
- *
- * PERNI: aste da 3 mm (filo da saldatura / barra di acciaio / filamento 3 mm).
- */
+// ============================================================================
+//  Custodia per tastiera meccanica con coperchio-stand per tablet
+//  ---------------------------------------------------------------------------
+//  La base e' una vasca: vano frontale aperto per la tastiera, vano posteriore
+//  cavo per i cavi e gli accessori, chiuso da una piastra superiore (che fa
+//  anche da finecorsa dell'apertura) e apribile tramite un portellino a
+//  incasso con foro pollice.
+//  Il coperchio NON ruota su un perno fisso: e' vincolato da una cerniera a
+//  QUADRILATERO ARTICOLATO (four-bar linkage) presente su ENTRAMBI i lati,
+//  quindi retrocede e si inclina contemporaneamente. Aperto a 70 gradi forma
+//  uno stand per tablet; il bordo inferiore del coperchio si appoggia sulla
+//  piastra posteriore, che fa da finecorsa contro il peso del tablet.
+//
+//  Riferimenti: X = profondita' (fronte->retro), Y = larghezza, Z = altezza.
+//  La cinematica e' risolta nel profilo 2D (x,z) ed estrusa lungo Y.
+//
+//  Quadrilatero articolato (per lato):
+//      B1 - P1 = biella1  (B1 = perno fisso nella parete della base)
+//      B2 - P2 = biella2  (B2 = perno fisso nella parete della base)
+//      P1 - P2 = coppia (il coperchio con le orecchie incollate)
+//  Livelli lungo Y, dall'interno verso l'esterno:
+//      parete base | orecchio | biella1 | biella2  (separati dal gioco g)
+//
+//  Sintesi a due posate (verificata in Python/numpy prima della stesura):
+//      B1 = [97.058, 14], B2 = [180.526, 18]
+//      L1 = 73.050, L2 = 95.861, d12 = 60
+//  Verifiche superate (minimi su 501 pose intermedie):
+//      continuita' 0->1 senza cambio di ramo (max passo 2.4e-5 mm)
+//      sottocoperchio/tastiera >= 3.0 mm; sottocoperchio/piastra-bordi >= 0
+//      P2-biella1 = 9.9 >= 8 | B1-biella2 = 11.0 >= 8 | P1-biella2 = 23.0 >= 20
+//      B1-coperchio = 24 >= 15 | B2-coperchio = 20 >= 15
+//      dz/dt del baricentro < 0 vicino alla posa aperta: la gravita' spinge
+//      il coperchio CONTRO il finecorsa (piastra posteriore), non verso
+//      l'apertura libera.
+//
+//  Solo OpenSCAD standard, nessuna libreria esterna.
+// ============================================================================
 
-/* ===================== PARAMETRI ===================== */
-mostra   = "assieme";   // "assieme","stampa","base","coperchio","orecchio","biella1","biella2"
-apertura = -1;          // 0 = chiuso ... 1 = aperto ; -1 = usa $t (animazione)
-mostra_fantasmi = true; // tastiera e tablet trasparenti nell'assieme
+// ----------------------------- PARAMETRI -----------------------------------
+// Tastiera
+kb_w     = 320;   // larghezza tastiera lungo Y [mm]
+kb_d     = 124;   // profondita' lungo X [mm]
+kb_h     = 32;    // altezza totale, keycap inclusi [mm]
+tol      = 0.6;   // gioco diametro/pareti [mm]
 
-// --- ANIMAZIONE (View > Animate, es. FPS 20, Steps 150) ---
-// "nessuna"  : modello montato, usa 'apertura' (0..1) come posa fissa
-// "tutto"    : montaggio pezzo per pezzo -> apertura -> tablet che si appoggia
-// "assembla" : solo il montaggio (vista esplosa che si ricompone)
-// "apri"     : solo apertura/chiusura del quadrilatero + tablet
-animazione  = "nessuna";
-camera_auto = true;     // imposta da script la vista per l'animazione
-t_manuale   = -1;       // >=0 forza un istante fisso dell'animazione (0..1), ignora $t
+// Tablet
+tablet_w = 250;   // larghezza tablet lungo Y [mm]
+tablet_h = 175;   // altezza tablet lungo il coperchio [mm]
+tablet_t = 8;     // spessore tablet [mm]
 
-// --- Tastiera (dimensioni esterne, tasti compresi) ---
-kb_w = 320;   // larghezza (asse Y)
-kb_d = 124;   // profondita' (asse X)
-kb_h = 32;    // altezza totale tastiera con keycap
-tol  = 0.6;   // gioco attorno alla tastiera (per lato)
+// Spessori
+floor_t  = 3;     // fondo della vasca [mm]
+wall_f   = 3;     // parete frontale e tramezzo [mm]
+wall_s   = 5;     // pareti laterali [mm]
+rear_top = 3;     // piastra di chiusura vano cavi [mm]
+top_gap  = 3;     // gioco sopra i keycap a coperchio chiuso [mm]
+t_lid    = 3;     // spessore piastra coperchio [mm]
+lip_t    = 4;     // spessore (lungo u) del fermo del tablet [mm]
+guide_t  = 4;     // spessore/altezza delle guide laterali tablet [mm]
+guide_l  = 45;    // lunghezza delle guide laterali lungo u [mm]
 
-// --- Tablet ---
-tablet_w = 250;  // lato lungo (orizzontale)
-tablet_h = 175;  // lato corto (appoggiato lungo il coperchio)
-tablet_t = 8;    // spessore
+// Cerniera
+pin_d    = 3;     // diametro perni (barre da 3 mm, non stampate) [mm]
+link_t   = 4;     // spessore bielle lungo Y [mm]
+ear_t    = 4;     // spessore orecchie lungo Y [mm]
+g        = 0.6;   // gioco fra livelli adiacenti lungo Y [mm]
+link_w   = 12;    // larghezza bielle (profilo a fessura) [mm]
+ear_r    = 7;     // raggio dei perni dell'orecchio [mm]
+ang_open = 70;    // angolo di apertura [gradi]
+open_dx  = 6;     // arretramento dell'origine coperchio nella posa aperta [mm]
+lp1_u    = 25;    // ascissa locale del perno coperchio P1 [mm]
+lp2_u    = 85;    // ascissa locale del perno coperchio P2 [mm]
+piv_v    = 12;    // profondita' dei perni sotto la faccia posteriore [mm]
+zb1      = 14;    // quota z del perno fisso B1 [mm]
+zb2      = 18;    // quota z del perno fisso B2 [mm]
 
-// --- Spessori ---
-floor_t  = 3;    // fondo
-wall_f   = 3;    // parete anteriore / posteriore / divisoria
-wall_s   = 5;    // pareti laterali
-rear_top = 3;    // piano superiore del vano posteriore
-top_gap  = 3;    // keycap sotto il bordo del vassoio
-t_lid    = 3;    // spessore piastra coperchio
-lip_t    = 4;    // spessore battuta inferiore del tablet
-guide_t  = 4;    // spessore guide laterali del tablet
-guide_l  = 45;   // lunghezza guide laterali
+// Accessori
+usa_magneti = true; // magneti 4x2 sul bordo superiore delle pareti, 2 per lato
+mag_d    = 4;     // diametro magnete [mm]
+mag_h    = 2;     // altezza magnete (profondita' dell'alloggio) [mm]
+mag_p1   = 0.25;  // posizione 1 lungo Lu (frazione) [-]
+mag_p2   = 0.75;  // posizione 2 lungo Lu (frazione) [-]
 
-// --- Cerniera ---
-pin_d    = 3;     // diametro perni
-link_t   = 4;     // spessore biella (e orecchio)
-ear_t    = 4;
-g        = 0.6;   // gioco tra strati
-link_w   = 12;    // larghezza biella
-ear_r    = 7;     // raggio dell'orecchio attorno ai perni
-ang_open = 70;    // inclinazione del coperchio da aperto (gradi dall'orizzontale)
-open_dx  = 6;     // distanza del bordo basso del coperchio aperto oltre il vassoio tastiera
-lp1_u    = 25;    // posizione lungo il coperchio del perno 1
-lp2_u    = 85;    // posizione lungo il coperchio del perno 2
-piv_v    = 12;    // profondita' dei perni sotto la faccia inferiore del coperchio
-zb1      = 14;    // altezza (Z) del perno di base 1
-zb2      = 18;    // altezza (Z) del perno di base 2
+// Dettagli di stampa/montaggio
+foro_prof = 4;    // profondita' fori ciechi dei perni B (dalla faccia esterna) [mm]
+pass_w    = 20;   // larghezza passaggio cavi nel tramezzo [mm]
+pass_h    = 10;   // altezza passaggio cavi [mm]
 
-// --- Magneti opzionali (chiusura) ---
-usa_magneti = true;
-mag_d = 4.2;  mag_h = 2;  // magnete 4x2 mm (foro con 0.2 di gioco)
+// Vano posteriore apribile (cavi e accessori)
+vano_d = 50;      // profondita' interna del vano posteriore [mm]
 
-$fn = 48;
+// Visualizzazione
+mostra      = "assieme"; // ["assieme","stampa","base","coperchio","orecchio", "biella1","biella2","portellino"]
+animazione  = "nessuna"; // ["nessuna","tutto","assembla","apri"]
+t_manuale   = 0;         // >0: forza l'istante dell'animazione (0..1)
+camera_auto = true;      // false: disattiva la camera impostata qui
 
-/* ===================== GEOMETRIA DERIVATA ===================== */
-D_kb  = kb_d + 2*wall_f;              // profondita' esterna vano tastiera
-Ztop  = floor_t + kb_h + top_gap;     // altezza bordo vassoio
-Lu    = max(tablet_h + 20, D_kb + 40);// lunghezza coperchio = profondita' totale
-Wi    = kb_w + 2*tol;                 // larghezza interna
-Wt    = Wi + 2*wall_s;                // larghezza esterna vassoio
-yw    = Wt/2;                         // faccia esterna parete laterale (lato +Y)
-Wl    = Wt + 2*(g + ear_t);           // larghezza coperchio
+// Camera (usata se camera_auto = true; con animazioni in anteprima)
+vpr_cam = [62, 0, 215];
+vpt_cam = [100, 0, 70];
+vpd_cam = 1250;
+$vpr = camera_auto ? vpr_cam : [55, 0, 25];
+$vpt = camera_auto ? vpt_cam : [100, 0, 40];
+$vpd = camera_auto ? vpd_cam : 900;
+$fn  = 32;
 
-// strati lato +Y
-y_e0  = yw + g;       y_e1  = y_e0 + ear_t;          // orecchio
-y_l10 = y_e1 + g;     y_l11 = y_l10 + link_t;        // biella 1
-y_l20 = y_l11 + g;    y_l21 = y_l20 + link_t;        // biella 2
+// ---------------------- GRANDEZZE DERIVATE --------------------------------
+D_kb = kb_d + 2*wall_f;                       // profondita' vano tastiera
+Ztop = floor_t + kb_h + top_gap;              // quota del bordo della vasca
+Lu   = max(tablet_h + 20, D_kb + 40, D_kb + vano_d + wall_f); // lunghezza coperchio = fondo
+Wi   = kb_w + 2*tol;                          // larghezza interna
+Wt   = Wi + 2*wall_s;                         // larghezza totale base
+Wl   = Wt + 2*(g + ear_t);                    // larghezza totale coperchio
 
-lp1 = [lp1_u, -piv_v];
-lp2 = [lp2_u, -piv_v];
+// Livelli lungo Y (lato +Y; lato -Y e' speculare)
+Yw0  = Wi/2;            // faccia interna parete
+Yw1  = Yw0 + wall_s;    // faccia esterna parete  (= Wt/2)
+Ye0  = Yw1 + g;         // faccia interna orecchio
+Ye1  = Ye0 + ear_t;     // faccia esterna orecchio (= Wl/2)
+Yl10 = Ye1 + g;         // faccia interna biella1
+Yl11 = Yl10 + link_t;   // faccia esterna biella1
+Yl20 = Yl11 + g;        // faccia interna biella2
+Yl21 = Yl20 + link_t;   // faccia esterna biella2
 
-/* ---- funzioni 2D ---- */
-function rot(a) = [[cos(a), -sin(a)], [sin(a), cos(a)]];
-function mulv(M, p) = [M[0][0]*p[0] + M[0][1]*p[1], M[1][0]*p[0] + M[1][1]*p[1]];
-function pose(O, a, p) = O + mulv(rot(a), p);
-function circ(c1, r1, c2, r2, pick) =
-    let(dd = norm(c2 - c1),
-        a  = (r1*r1 - r2*r2 + dd*dd) / (2*dd),
-        h  = sqrt(max(r1*r1 - a*a, 0)),
-        e  = (c2 - c1)/dd,
-        m  = c1 + a*e,
-        n  = [-e[1], e[0]])
-    m + pick*h*n;
+prof_poch = t_lid - g;                        // profondita' tasca tenone
+h_fermo   = tablet_t + 3;                     // fermo = spessore tablet + 3 mm
+rp_foro   = (pin_d + 0.4)/2;                  // raggio fori perni (gioco 0.4)
 
-/* ---- sintesi a due posizioni ---- */
-Oc  = [0, Ztop];                      // origine coperchio da chiuso
-Oo  = [D_kb + open_dx, Ztop];         // origine coperchio da aperto (poggia sul piano posteriore)
+// Portellino del vano posteriore (a incasso, a filo della piastra)
+porta_aperta  = true;              // abilita il portellino del vano posteriore
+porta_l       = 45;                // lunghezza portellino lungo X [mm]
+porta_cornice = 20;                // cornice libera per lato verso le pareti [mm]
+porta_w       = Wi - 2*porta_cornice; // larghezza portellino lungo Y [mm]
+porta_t       = 2;                 // spessore portellino (minore di rear_top) [mm]
+porta_lip     = 3;                 // larghezza del bordo di appoggio nel fondo [mm]
+porta_gioco   = 0.25;              // gioco laterale portellino/seduta [mm]
+porta_foro_l  = 24;                // lunghezza foro pollice lungo Y [mm]
+porta_foro_d  = 10;                // larghezza foro pollice lungo X [mm]
+porta_foro_dx = 8;                 // distanza foro pollice dal bordo frontale [mm]
+porta_x = D_kb + open_dx + (Lu - wall_f - D_kb - open_dx)/2; // centro portellino
 
-P1c = pose(Oc, 0, lp1);  P2c = pose(Oc, 0, lp2);
-P1o = pose(Oo, ang_open, lp1);  P2o = pose(Oo, ang_open, lp2);
+assert(abs(Ye1 - Wl/2) < 1e-6, "i livelli Y non tornano con Wl");
+assert(lp2_u > lp1_u && piv_v > ear_r, "geometria orecchio non valida");
+assert(!porta_aperta || porta_t < rear_top,
+       "portellino troppo spesso: serve porta_t < rear_top per l'incasso");
+assert(!porta_aperta || (porta_x - porta_l/2 >= D_kb + open_dx &&
+                         porta_x + porta_l/2 <= Lu - wall_f),
+       "portellino fuori dal vano posteriore");
+assert(!porta_aperta || porta_w/2 + porta_lip <= Wi/2 - 1,
+       "portellino troppo largo rispetto alle pareti laterali");
+assert(!porta_aperta || (porta_foro_dx + porta_foro_d < porta_l - 2*porta_gioco &&
+                         porta_foro_l < porta_w - 2*porta_lip),
+       "foro pollice fuori dal portellino");
 
-function bisett(pc, po, zb) =
-    let(m = (pc + po)/2, d = po - pc, n = [-d[1], d[0]]/norm(d),
-        s = (zb - m[1]) / n[1])
+// ------------------ CINEMATICA 2D NEL PIANO (x, z) -------------------------
+// Il coperchio vive in un riferimento locale (u, v): u lungo il coperchio a
+// partire dal bordo inferiore, v normale alla piastra con v = 0 sulla faccia
+// POSTERIORE (quella che si stampa a terra e guarda la tastiera da chiuso).
+// I perni del coperchio sono sotto la faccia posteriore: lp = [u, -piv_v].
+
+function rot2(a, v) = [v[0]*cos(a) - v[1]*sin(a), v[0]*sin(a) + v[1]*cos(a)];
+function dot2(u, v) = u[0]*v[0] + u[1]*v[1];
+
+// angolo di un vettore 2D in gradi, quadranti gestiti (evita ambiguita' atan2)
+function ang_v(v) = v[0] == 0 ? (v[1] > 0 ? 90 : v[1] < 0 ? -90 : 0) :
+                    v[0] > 0 ? atan(v[1]/v[0]) :
+                    (v[1] >= 0 ? atan(v[1]/v[0]) + 180 : atan(v[1]/v[0]) - 180);
+
+lp1 = [lp1_u, -piv_v];                        // perno coperchio P1 (locale)
+lp2 = [lp2_u, -piv_v];                        // perno coperchio P2 (locale)
+
+Oc = [0, Ztop];                               // origine coperchio, chiuso
+Oo = [D_kb + open_dx, Ztop];                  // origine coperchio, aperto
+
+Pc1 = Oc + lp1;  Pc2 = Oc + lp2;              // perni coperchio, chiuso
+Po1 = Oo + rot2(ang_open, lp1);               // perni coperchio, aperto
+Po2 = Oo + rot2(ang_open, lp2);
+
+// perno fisso: sull'asse del segmento (posa chiusa <-> aperta), con z = zb
+function bialetta(Pc, Po, zb) =
+    let(m = (Pc + Po)/2, d = Po - Pc, L = norm(d),
+        n = [-d[1], d[0]]/L, s = (zb - m[1])/n[1])
     m + s*n;
 
-B1 = bisett(P1c, P1o, zb1);   // perno di base 1
-B2 = bisett(P2c, P2o, zb2);   // perno di base 2
+B1 = bialetta(Pc1, Po1, zb1);
+B2 = bialetta(Pc2, Po2, zb2);
 
-L1  = norm(P1c - B1);         // lunghezza biella 1
-L2  = norm(P2c - B2);         // lunghezza biella 2
-d12 = norm(P2c - P1c);        // distanza perni sul coperchio
+L1  = norm(Pc1 - B1);                         // lunghezza biella1
+L2  = norm(Pc2 - B2);                         // lunghezza biella2
+d12 = norm(Pc2 - Pc1);                        // distanza fra i perni coperchio
 
-pick = (norm(circ(P1c, d12, B2, L2, 1) - P2c) < 0.05) ? 1 : -1;
+a0c = ang_v(Pc1 - B1);                        // angolo biella1, chiusa
+a1o = ang_v(Po1 - B1);                        // angolo biella1, aperta
+da1 = a1o - a0c;
+da  = da1 - 360*floor((da1 + 180)/360);       // differenza in (-180, 180]
 
-a0 = atan2(P1c[1] - B1[1], P1c[0] - B1[0]);
-a1 = atan2(P1o[1] - B1[1], P1o[0] - B1[0]);
-da = ((a1 - a0 + 540) % 360) - 180;
+// intersezione di due cerchi: due radici, scelta con 'segno' (+1 / -1)
+function intersez_cerchi(c0, r0, c1, r1, segno) =
+    let(d = c1 - c0, D = norm(d),
+        a = (r0*r0 - r1*r1 + D*D)/(2*D),
+        h = sqrt(max(r0*r0 - a*a, 0)),
+        p = c0 + a*d/D,
+        n = [-d[1], d[0]]/D)
+    p + segno*h*n;
 
-/* ---- fasi dell'animazione ---- */
-function sm(x) = let(c = min(max(x, 0), 1)) c*c*(3 - 2*c);
-function ph(t, a, b) = sm((t - a)/(b - a));
+// ramo corretto: quello che nella posa CHIUSA restituisce esattamente Pc2
+segno_ramo = let(d = B2 - Pc1, D = norm(d),
+                 a = (d12*d12 - L2*L2 + D*D)/(2*D),
+                 p = Pc1 + a*d/D, n = [-d[1], d[0]]/D)
+             (dot2(Pc2 - p, n) >= 0 ? 1 : -1);
 
-tt     = (t_manuale >= 0) ? t_manuale : $t;
-asm_t  = (animazione == "tutto")    ? tt/0.5 :
-         (animazione == "assembla") ? tt     : 1;             // avanzamento montaggio 0..1
-t_ap   = (animazione == "tutto")    ? ph(tt, 0.55, 0.80) :
-         (animazione == "apri")     ? ph(tt, 0.10, 0.70) :
-         (animazione == "assembla") ? 0 :
-         (apertura >= 0) ? apertura : 0;
-t_tab  = (animazione == "tutto")    ? ph(tt, 0.83, 0.97) :
-         (animazione == "apri")     ? ph(tt, 0.75, 0.95) :
-         (animazione == "assembla") ? 0 : 1;                  // tablet che scivola sulla battuta
+// --- posa generica t in [0, 1]: 0 = chiusa, 1 = aperta ---
+function posa_biella1(t) = a0c + t*da;                        // angolo biella1
+function P1_posa(t)      = B1 + L1*[cos(posa_biella1(t)),
+                                   sin(posa_biella1(t))];
+function P2_posa(t)      = intersez_cerchi(P1_posa(t), d12, B2, L2, segno_ramo);
+function ang_coperchio(t) = ang_v(P2_posa(t) - P1_posa(t));   // angolo coperchio
+function O_coperchio(t)  = P1_posa(t) - rot2(ang_coperchio(t), lp1);
 
-p_kb   = ph(asm_t, 0.00, 0.20);   // tastiera nella base
-p_ear  = ph(asm_t, 0.12, 0.30);   // orecchi nelle tasche del coperchio
-p_lid  = ph(asm_t, 0.30, 0.50);   // coperchio sulla base
-p_l1   = ph(asm_t, 0.50, 0.65);   // biella 1
-p_l2   = ph(asm_t, 0.62, 0.77);   // biella 2
-p_pin  = ph(asm_t, 0.77, 1.00);   // perni
+// punto del mondo -> riferimento locale del coperchio alla posa t
+function loc_cop(P, t) = rot2(-ang_coperchio(t), P - O_coperchio(t));
 
-function didascalia() =
-    (animazione == "nessuna") ? "" :
-    (animazione == "apri")
-        ? (tt < 0.75 ? "Apertura: il quadrilatero fa scorrere e inclinare il coperchio" : "Il tablet scivola sulla battuta") :
-    (animazione == "assembla" || tt < 0.5)
-        ? (asm_t < 0.12 ? "1. La tastiera entra nella base" :
-           asm_t < 0.30 ? "2. Gli orecchi si incollano nelle tasche del coperchio" :
-           asm_t < 0.50 ? "3. Il coperchio si appoggia sulla base" :
-           asm_t < 0.62 ? "4. Biella 1 (strato interno)" :
-           asm_t < 0.77 ? "5. Biella 2 (strato esterno)" :
-                          "6. Perni da 3 mm nei 4 snodi (su entrambi i lati)") :
-    (tt < 0.55 ? "Montato" :
-     tt < 0.82 ? "7. Apertura: il quadrilatero fa scorrere e inclinare il coperchio" :
-                 "8. Il tablet scivola sulla battuta e si appoggia");
+echo(str("SINTESI:  L1 = ", L1, "  L2 = ", L2, "  d12 = ", d12));
+echo(str("PERNI FISSI:  B1 = ", B1, "   B2 = ", B2));
 
-if (animazione != "nessuna") echo(didascalia());
-$vpr = camera_auto ? [62, 0, 215] : [55, 0, 25];
-$vpt = camera_auto ? [100, 0, 70] : [0, 0, 0];
-$vpd = camera_auto ? 1250 : 500;
-a_t   = a0 + da*t_ap;
-P1_t  = B1 + L1*[cos(a_t), sin(a_t)];
-P2_t  = circ(P1_t, d12, B2, L2, pick);
-ang_t = atan2(P2_t[1] - P1_t[1], P2_t[0] - P1_t[0]);
-O_t   = P1_t - mulv(rot(ang_t), lp1);
-a2_t  = atan2(P2_t[1] - B2[1], P2_t[0] - B2[0]);
+// ---------------- VERIFICHE CINEMATICHE A RUNTIME --------------------------
+// distanza punto-segmento nel piano
+function d_ps(p, a, b) =
+    let(ab = b - a, tt = max(0, min(1, dot2(p - a, ab)/dot2(ab, ab))))
+    norm(p - (a + tt*ab));
+// distanza punto-coperchio (segmento dall'origine, lungo Lu, alla posa t)
+function d_cop(p, t) =
+    let(O = O_coperchio(t),
+        u = [cos(ang_coperchio(t)), sin(ang_coperchio(t))])
+    d_ps(p, O, O + u*Lu);
 
-echo("Lunghezza biella 1 [mm]:", L1, " biella 2 [mm]:", L2);
-echo("Perno base 1 (x,z):", B1, " perno base 2 (x,z):", B2);
-echo("Larghezza totale vassoio:", Wt, " coperchio:", Wl, " profondita':", Lu, " altezza:", Ztop);
+campioni = [for (i = [0:20]) i/20];
+min_P2L1  = min([for (t = campioni) d_ps(P2_posa(t), B1, P1_posa(t))]);
+min_B1L2  = min([for (t = campioni) d_ps(B1, B2, P2_posa(t))]);
+min_P1L2  = min([for (t = campioni) d_ps(P1_posa(t), B2, P2_posa(t))]);
+min_B1cop = min([for (t = campioni) d_cop(B1, t)]);
+min_B2cop = min([for (t = campioni) d_cop(B2, t)]);
+min_B2L1  = min([for (t = campioni) d_ps(B2, B1, P1_posa(t))]);
+echo(str("VERIFICHE (min su 21 pose):  P2-biella1 = ", min_P2L1, " (>=8)  |  ",
+         "B1-biella2 = ", min_B1L2, " (>=8)  |  P1-biella2 = ", min_P1L2,
+         " (>=20)  |  B1-coperchio = ", min_B1cop, " (>=15)  |  ",
+         "B2-coperchio = ", min_B2cop, " (>=15)  |  B2-biella1 = ", min_B2L1));
 
-/* ===================== UTILITA' ===================== */
-// estrude una forma 2D (x,z) tra y0 e y1
-module prof(y0, y1) {
-    rotate([90,0,0]) translate([0,0,-y1]) linear_extrude(y1 - y0) children();
-}
-// perno cilindrico lungo Y
-module pin(p, y0, y1, d = pin_d) {
-    translate([p[0], y0, p[1]]) rotate([-90,0,0]) cylinder(d = d, h = y1 - y0);
-}
-// duplica per i due lati (+Y e -Y)
-module lati() { children(); mirror([0,1,0]) children(); }
+// ---------------------------- MODULI BASE ----------------------------------
+// Estrusione lungo Y di un profilo 2D (x = u, y = v): occupa Y in [-h, 0],
+// la coordinata y del profilo diventa la quota Z.
+module estrusa_y(h) rotate([90, 0, 0]) linear_extrude(height = h) children();
 
-/* ===================== BASE ===================== */
+// ------------------------------- 1. BASE -----------------------------------
 module base() {
     difference() {
         translate([0, -Wt/2, 0]) cube([Lu, Wt, Ztop]);
-        // vano tastiera
-        translate([wall_f, -Wi/2, floor_t]) cube([kb_d, Wi, Ztop]);
-        // vano posteriore (cavita' sotto il piano superiore)
+        // vano tastiera (aperto in alto)
+        translate([wall_f, -Wi/2, floor_t])
+            cube([D_kb - 2*wall_f, Wi, Ztop]);
+        // vano posteriore cavi (chiuso sopra dalla piastra rear_top)
         translate([D_kb, -Wi/2, floor_t])
-            cube([Lu - D_kb - wall_f, Wi, Ztop - floor_t - rear_top]);
-        // passaggio cavo nella parete divisoria
-        translate([D_kb - wall_f - 1, -Wi/2 + 8, floor_t + 2]) cube([wall_f + 2, 14, 8]);
-        // fori ciechi dei perni di base (solo parete laterale)
-        lati() {
-            pin(B1, yw - 4, yw + 1, pin_d + 0.1);
-            pin(B2, yw - 4, yw + 1, pin_d + 0.1);
+            cube([Lu - D_kb - wall_f, Wi, Ztop - rear_top - floor_t]);
+        // passaggio cavi nel tramezzo
+        translate([D_kb - wall_f - tol, -pass_w/2, floor_t])
+            cube([wall_f + 2*tol, pass_w, pass_h]);
+        // fori ciechi dei perni B1/B2: dalla faccia ESTERNA delle pareti
+        for (sx = [-1, 1], B = [B1, B2])
+            translate([B[0], sx*Yw1, B[1]])
+                rotate([sx < 0 ? -90 : 90, 0, 0])
+                    cylinder(h = foro_prof, d = pin_d + 0.1);
+        // alloggi magneti sul bordo superiore delle pareti laterali
+        if (usa_magneti)
+            for (sx = [-1, 1], f = [mag_p1, mag_p2])
+                translate([f*Lu, sx*(Yw0 + wall_s/2), Ztop - mag_h])
+                    cylinder(h = mag_h + 2, d = mag_d);
+        // portellino del vano posteriore: seduta a spoglio profonda porta_t
+        // (il portellino resta a filo del piano) + luce con bordo di appoggio
+        if (porta_aperta) {
+            translate([porta_x - porta_l/2, -porta_w/2, Ztop - porta_t])
+                cube([porta_l, porta_w, porta_t + 1]);        // seduta
+            translate([porta_x - porta_l/2 + porta_lip,
+                       -porta_w/2 + porta_lip, Ztop - rear_top - 1])
+                cube([porta_l - 2*porta_lip, porta_w - 2*porta_lip,
+                      rear_top + 2]);                         // luce + bordo
         }
-        // magneti sul bordo delle pareti laterali
-        if (usa_magneti) lati()
-            for (x = [30, 100]) translate([x, yw - wall_s/2, Ztop - mag_h]) cylinder(d = mag_d, h = mag_h + 0.1);
     }
 }
 
-/* ===================== ORECCHIO (solidale al coperchio) ===================== */
-module ear2d() {   // coordinate coperchio (u,v)
+// -------------------- PORTELLINO DEL VANO POSTERIORE -----------------------
+// Parte separata, incassata a filo con la piastra posteriore: poggia sul
+// bordo perimetrale (larghezza porta_lip) e si estrae spingendo dal foro
+// pollice. Con il coperchio principale chiuso resta trattenuto in sede.
+module portellino() {
+    dl = porta_l - 2*porta_gioco;                  // quotato per il gioco
+    dw = porta_w - 2*porta_gioco;
     difference() {
-        hull() {
-            translate(lp1) circle(r = ear_r);
-            translate(lp2) circle(r = ear_r);
-            translate([lp1[0] - ear_r, 0]) square([lp2[0] - lp1[0] + 2*ear_r, t_lid - 1]);
-        }
-        translate(lp1) circle(d = pin_d + 0.4);
-        translate(lp2) circle(d = pin_d + 0.4);
+        cube([dl, dw, porta_t]);
+        // foro pollice: fessura arcuata passante presso il bordo frontale
+        hull()
+            for (yy = [-1, 1])
+                translate([porta_foro_dx,
+                           dw/2 + yy*(porta_foro_l - porta_foro_d)/2, -1])
+                    cylinder(h = porta_t + 2, d = porta_foro_d);
     }
 }
-module orecchio() { linear_extrude(ear_t) ear2d(); }
 
-/* ===================== COPERCHIO (sistema di riferimento u,v) ===================== */
-lip_h = tablet_t + 3;
-gy    = tablet_w/2 + 0.6;
-module coperchio() {
+module portellino_in_posa() color("SteelBlue")
+    translate([porta_x - porta_l/2 + porta_gioco,
+               -(porta_w - 2*porta_gioco)/2, Ztop - porta_t])
+        portellino();
+
+// ------------------------------ 2. COPERCHIO -------------------------------
+// Solido nel riferimento locale (u, v), con la faccia posteriore in v = 0
+// (stampabile a faccia posteriore sul letto). Larghezza simmetrica su Y.
+module coperchio_solido() {
     difference() {
         union() {
-            translate([0, -Wl/2, 0]) cube([Lu, Wl, t_lid]);
-            // battuta inferiore
-            translate([0, -gy - guide_t, t_lid - 0.01]) cube([lip_t, 2*(gy + guide_t), lip_h]);
-            // guide laterali
-            lati() translate([0, gy, t_lid - 0.01]) cube([guide_l, guide_t, lip_h]);
+            // piastra + fermo inferiore del tablet (su tutta la larghezza)
+            translate([0, Wl/2, 0]) estrusa_y(Wl)
+                union() {
+                    square([Lu, t_lid]);
+                    translate([0, t_lid]) square([lip_t, h_fermo]);
+                }
+            // guide laterali del tablet, a ridosso del fermo
+            for (sy = [-1, 1])
+                translate([lip_t, sy*(tablet_w/2 + guide_t), t_lid])
+                    estrusa_y(guide_t) square([guide_l, guide_t]);
         }
-        // tasche per i tenoni degli orecchi (aperte verso l'esterno)
-        lati() prof(y_e0 - 0.2, y_e1 + 0.3)
-            offset(delta = 0.2) intersection() {
-                ear2d();
-                translate([0, 0]) square([400, t_lid - 1]);
-            }
-        // magneti
-        if (usa_magneti) lati()
-            for (x = [30, 100]) translate([x, yw - wall_s/2, -0.1]) cylinder(d = mag_d, h = mag_h + 0.1);
+        // tasche per i tenoni delle orecchie, aperte verso l'esterno
+        for (sy = [-1, 1])
+            translate([lp1_u - g, sy > 0 ? Wl/2 - ear_t : -Wl/2, -1])
+                cube([lp2_u - lp1_u + 2*g, ear_t, prof_poch + 1]);
     }
 }
 
-/* ===================== BIELLE ===================== */
-module link2d(L) {
+// applica la posa t del coperchio ai figli (costruiti nel riferimento locale)
+module in_coperchio(t)
+    translate([O_coperchio(t)[0], 0, O_coperchio(t)[1]])
+        rotate([0, -ang_coperchio(t), 0]) children();
+
+module coperchio_in_posa(t) in_coperchio(t) color("Peru") coperchio_solido();
+
+// ------------------------------ 3. ORECCHIO --------------------------------
+// Profilo 2D nel riferimento del coperchio: inviluppo convesso di due cerchi
+// centrati sui perni P1/P2, piu' il tenone che entra nella tasca della piastra.
+module profilo_orecchio() {
     difference() {
-        hull() { circle(d = link_w); translate([L, 0]) circle(d = link_w); }
+        union() {
+            hull() {
+                translate(lp1) circle(r = ear_r);
+                translate(lp2) circle(r = ear_r);
+            }
+            // tenone nella piastra
+            translate([lp1_u, -piv_v])
+                square([lp2_u - lp1_u, piv_v + prof_poch]);
+            // fori dei perni P1/P2 (orecchio <-> bielle)
+            for (lp = [lp1, lp2]) translate(lp) circle(d = pin_d + 0.4);
+        }
+        // zona libera per i perni B1/B2: fascia circolare (raggio L_i attorno
+        // a lp_i) spazzata dal perno fisso durante l'apertura, delimitata in
+        // angolo dal percorso reale. Con i valori predefiniti resta fuori dal
+        // profilo (nessun taglio), ma protegge al variare dei parametri.
+        zona_libera_2d(B1, lp1, L1);
+        zona_libera_2d(B2, lp2, L2);
+    }
+}
+
+// helper per la zona libera: angoli srotolati del percorso di B attorno a lp
+function wrap180(d) = d - 360*floor((d + 180)/360);
+function passi_B(B, lp, N = 24) =
+    [for (k = [0:N-1])
+        wrap180(ang_v(loc_cop(B, (k + 1)/N) - lp) -
+                ang_v(loc_cop(B, k/N) - lp))];
+function somma(v, i = 0, acc = 0) =
+    i >= len(v) ? acc : somma(v, i + 1, acc + v[i]);
+function theta_B(B, lp, N = 24) =
+    let(p  = passi_B(B, lp, N),
+        sg = somma(p) >= 0 ? 1 : -1,         // verso dello spazzamento
+        t0 = ang_v(loc_cop(B, 0) - lp) - 5*sg)
+    concat([t0],
+           [for (i = [1:N]) t0 + somma([for (k = [0:i-1]) p[k]])],
+           [t0 + somma(p) + 5*sg]);          // margine angolare a fine corsa
+
+module zona_libera_2d(B, lp, L) {
+    thetas = theta_B(B, lp);
+    Rg   = L + rp_foro + 2;
+    r_in = max(L - rp_foro, 0.01);           // tutela per parametri estremi
+    intersection() {
+        difference() {
+            translate(lp) circle(r = L + rp_foro);
+            translate(lp) circle(r = r_in);
+        }
+        polygon(concat([lp],
+            [for (th = thetas) lp + Rg*[cos(th), sin(th)]]));
+    }
+}
+
+// orecchio in posa: nel riferimento coperchio, fascia Y esterna di ciascun lato
+module orecchio_in_posa(t, sy, off_y = 0)
+    color("Goldenrod") in_coperchio(t)
+        translate([0, sy*Wl/2 + (sy > 0 ? 0 : ear_t) + sy*off_y, 0])
+            estrusa_y(ear_t) profilo_orecchio();
+
+// ------------------------------- 4. BIELLE ---------------------------------
+// Profilo a fessura: inviluppo di due cerchi diametro link_w, fori per i perni.
+module biella(L) {
+    difference() {
+        hull() {
+            circle(d = link_w);
+            translate([L, 0]) circle(d = link_w);
+        }
         circle(d = pin_d + 0.4);
         translate([L, 0]) circle(d = pin_d + 0.4);
     }
 }
-module biella1() { linear_extrude(link_t) link2d(L1); }
-module biella2() { linear_extrude(link_t) link2d(L2); }
 
-/* ===================== ASSIEME ===================== */
+function ang_biella2(t) = ang_v(P2_posa(t) - B2);
+
+// biella in posa: ruota attorno al perno fisso B_i (angolo dalla sintesi)
+module biella_in_posa(tipo, t, sy, off_y = 0) {
+    ang = tipo == 1 ? posa_biella1(t) : ang_biella2(t);
+    B   = tipo == 1 ? B1 : B2;
+    L   = tipo == 1 ? L1 : L2;
+    y1  = tipo == 1 ? (sy > 0 ? Yl11 : -Yl10) : (sy > 0 ? Yl21 : -Yl20);
+    color("OrangeRed") translate([B[0], y1 + sy*off_y, B[1]])
+        rotate([0, -ang, 0]) estrusa_y(link_t) biella(L);
+}
+
+// -------------------------------- 5. PERNI ---------------------------------
+// Barre da 3 mm (non stampate): mostrate solo nell'assieme.
+module perno_sxy(px, pz, sy, ya, yb, off = 0) color("Silver") {
+    y0 = sy > 0 ? ya : -yb;                     // inizio (lato interno)
+    y1 = sy > 0 ? yb : -ya;                     // fine (lato esterno)
+    translate([px, y0 + off, pz])
+        rotate([-90, 0, 0]) cylinder(h = y1 - y0, d = pin_d);
+}
+
+module perni_in_posa(t, off = 0) {
+    yt = Yw1 - foro_prof;                       // fondo del foro cieco
+    for (sy = [-1, 1]) {
+        P1v = P1_posa(t); P2v = P2_posa(t);
+        // B1: parete + orecchio (zona libera) + biella1
+        perno_sxy(B1[0], B1[1], sy, yt, Yl11, sy*off);
+        // B2: parete + orecchio (zona libera) + biella2
+        perno_sxy(B2[0], B2[1], sy, yt, Yl21, sy*off);
+        // P1: orecchio + biella1 ; P2: orecchio + biella2
+        perno_sxy(P1v[0], P1v[1], sy, Ye0, Yl11, sy*off);
+        perno_sxy(P2v[0], P2v[1], sy, Ye0, Yl21, sy*off);
+    }
+}
+
+// --------------------------- 6. FANTASMI -----------------------------------
+module corpo_tastiera() {
+    kc   = 0.25*kb_h;                           // altezza keycap fantasma
+    cols = floor(kb_w/18);  pitch = kb_w/cols;  ksz = 0.72*pitch;
+    rows = floor(kb_d/18);  rpit  = kb_d/rows;
+    translate([wall_f + tol, -kb_w/2, floor_t]) {
+        cube([kb_d, kb_w, kb_h - kc]);
+        for (i = [0:cols-1], j = [0:rows-1])
+            translate([j*rpit + (rpit - ksz)/2, i*pitch + (pitch - ksz)/2,
+                       kb_h - kc])
+                cube([ksz, ksz, kc]);
+    }
+}
+
+// --------------------------- MODALITA' DI VISTA ----------------------------
 module assieme() {
     color("SteelBlue") base();
-
-    // coperchio + orecchi nella posa corrente (cala dall'alto durante il montaggio)
-    translate([0, 0, 140*(1 - p_lid)])
-    translate([O_t[0], 0, O_t[1]]) rotate([0, -ang_t, 0]) {
-        color("Peru", 0.95) coperchio();
-        color("Goldenrod") lati() translate([0, 55*(1 - p_ear), 0]) prof(y_e0, y_e1) ear2d();
-        if (mostra_fantasmi && t_tab > 0)
-            color("LightSteelBlue", 0.85)
-                translate([lip_t + 0.3 + 70*(1 - t_tab), -tablet_w/2, t_lid]) cube([tablet_h, tablet_w, tablet_t]);
-    }
-
-    // bielle (entrano lateralmente)
-    color("OrangeRed") lati() {
-        translate([0, 55*(1 - p_l1), 0]) prof(y_l10, y_l11) translate(B1) rotate(a_t)  link2d(L1);
-        translate([0, 55*(1 - p_l2), 0]) prof(y_l20, y_l21) translate(B2) rotate(a2_t) link2d(L2);
-    }
-
-    // perni (aste da 3 mm) infilati dall'esterno
-    color("Silver") lati() translate([0, 45*(1 - p_pin), 0]) {
-        pin(B1,   yw - 4, y_l11);
-        pin(B2,   yw - 4, y_l21);
-        pin(P1_t, y_e0,   y_l11);
-        pin(P2_t, y_e0,   y_l21);
-    }
-
-    // tastiera fantasma (cala dall'alto)
-    if (mostra_fantasmi)
-        color("Gray", 0.75)
-            translate([wall_f + 0.3, -kb_w/2, floor_t + 110*(1 - p_kb)]) cube([kb_d - 0.6, kb_w, kb_h]);
-
-    // didascalia 3D (ancorata in basso nella vista)
-    if (animazione != "nessuna")
-        color("Black") translate([100, 0, 70])
-            rotate([0, 0, 215]) rotate([62, 0, 0])    // rivolta verso la camera
-                translate([0, -205, 0])
-                    linear_extrude(1) text(didascalia(), size = 12, halign = "center");
+    if (porta_aperta) portellino_in_posa();
+    coperchio_in_posa(1);
+    for (sy = [-1, 1]) orecchio_in_posa(1, sy);
+    for (sy = [-1, 1]) biella_in_posa(1, 1, sy);
+    for (sy = [-1, 1]) biella_in_posa(2, 1, sy);
+    perni_in_posa(1);
 }
 
-/* ===================== DISPOSIZIONE PER LA STAMPA ===================== */
-module stampa() {
-    base();
-    translate([0, Wt/2 + Wl/2 + 15, 0]) translate([0, 0, 0]) coperchio();
-    // 2 orecchi, 2 bielle1, 2 bielle2
-    for (i = [0:1]) {
-        translate([Lu + 25, -Wt/2 + i*60, 0]) orecchio();
-        translate([Lu + 25, -Wt/2 + 130 + i*20, 0]) biella1();
-        translate([Lu + 25, -Wt/2 + 170 + i*20, 0]) biella2();
-    }
+// layout del piano di stampa
+ps_gap         = 25;
+ps_x_coperchio = Lu + ps_gap;
+ps_x_orecchio  = ps_x_coperchio + Lu + ps_gap;
+ps_x_biella1   = ps_x_orecchio + (lp2_u - lp1_u + 2*ear_r) + ps_gap;
+ps_x_biella2   = ps_x_biella1 + L1 + ps_gap;
+ps_x_porta     = ps_x_biella2 + L2 + ps_gap;
+
+module coperchio_stampa() translate([ps_x_coperchio, 0, 0])
+    color("Peru") coperchio_solido();          // faccia posteriore sul letto
+module portellino_stampa() color("SteelBlue")
+    translate([ps_x_porta, -(porta_w - 2*porta_gioco)/2, 0]) portellino();
+module orecchio_stampa(sy)
+    color("Goldenrod")
+        translate([ps_x_orecchio - (lp1_u - ear_r), sy*(ear_t/2 + 10),
+                   piv_v + ear_r])
+            estrusa_y(ear_t) profilo_orecchio();
+module biella_stampa(tipo, sy)
+    color("OrangeRed")
+        translate([tipo == 1 ? ps_x_biella1 : ps_x_biella2,
+                   sy*(link_t/2 + 10), link_w/2])
+            estrusa_y(link_t) biella(tipo == 1 ? L1 : L2);
+
+module piano_stampa() {
+    color("SteelBlue") base();
+    if (porta_aperta) portellino_stampa();
+    coperchio_stampa();
+    orecchio_stampa(1);
+    orecchio_stampa(-1);
+    biella_stampa(1, 1);
+    biella_stampa(1, -1);
+    biella_stampa(2, 1);
+    biella_stampa(2, -1);
 }
 
-/* ===================== SELEZIONE ===================== */
-if      (mostra == "assieme")   assieme();
-else if (mostra == "stampa")    stampa();
-else if (mostra == "base")      base();
-else if (mostra == "coperchio") coperchio();
-else if (mostra == "orecchio")  orecchio();
-else if (mostra == "biella1")   biella1();
-else if (mostra == "biella2")   biella2();
+// ------------------------------ ANIMAZIONE ---------------------------------
+t_eff = t_manuale > 0 ? min(t_manuale, 1) : $t;
+function sstep(x) = let(x = max(0, min(1, x))) x*x*(3 - 2*x);
+
+// frazione di completamento della fase i (1..8) secondo la modalita'
+function fase(i) =
+    animazione == "assembla" ? (i <= 6 ? sstep(t_eff*6 - (i - 1)) : 0) :
+    animazione == "apri"     ? (i <= 6 ? 1 : sstep(t_eff*2 - (i - 7))) :
+    sstep(t_eff*8 - (i - 1));
+
+didascalie = [
+    "1 - La tastiera si posa nella base",
+    "2 - Le orecchie scorrono nelle tasche del coperchio",
+    "3 - Il coperchio scende sulla base",
+    "4 - Inserimento biella 1",
+    "5 - Inserimento biella 2",
+    "6 - Inserimento perni da 3 mm",
+    "7 - Apertura: il coperchio diventa stand",
+    "8 - Il tablet scorre lungo il coperchio fino al fermo"];
+
+function idx_fase() =
+    animazione == "assembla" ? min(6, floor(t_eff*6) + 1) :
+    animazione == "apri"     ? (t_eff < 0.5 ? 7 : 8) :
+    min(8, floor(t_eff*8) + 1);
+
+// didascalia 3D: rivolta alla camera e ancorata in basso nella vista
+module didascalia(txt) {
+    up = [sin(vpr_cam[2])*sin(vpr_cam[0]),
+          -cos(vpr_cam[2])*sin(vpr_cam[0]),
+          cos(vpr_cam[0])];
+    translate(vpt_cam - 90*up) rotate(vpr_cam)
+        linear_extrude(2)
+            text(txt, size = 9, halign = "center", valign = "center");
+}
+
+module scena_animata() {
+    s1 = fase(1); s2 = fase(2); s3 = fase(3); s4 = fase(4);
+    s5 = fase(5); s6 = fase(6); s7 = fase(7); s8 = fase(8);
+    // base fissa
+    color("SteelBlue") base();
+    // fase 1: la tastiera fantasma scende in sede
+    translate([0, 0, (1 - s1)*80])
+        color([0.85, 0.85, 0.85, 0.55]) corpo_tastiera();
+    // fasi 2-3: orecchie laterali nelle tasche, poi il coperchio scende
+    alz = (1 - s3)*45;                          // sollevamento iniziale
+    if (s2 > 0 || s7 > 0) translate([0, 0, alz]) {
+        coperchio_in_posa(s7);
+        if (s2 > 0)
+            for (sy = [-1, 1]) orecchio_in_posa(s7, sy, (1 - s2)*60);
+    }
+    // fasi 4-5: bielle che scorrono in senso laterale
+    if (s4 > 0) for (sy = [-1, 1]) biella_in_posa(1, s7, sy, (1 - s4)*60);
+    if (s5 > 0) for (sy = [-1, 1]) biella_in_posa(2, s7, sy, (1 - s5)*60);
+    // fase 6: perni inseriti dall'esterno
+    if (s6 > 0) perni_in_posa(s7, (1 - s6)*60);
+    // fase 8: tablet fantasma che scorre lungo il coperchio fino al fermo
+    if (s8 > 0)
+        in_coperchio(1)
+            translate([lip_t + (Lu - lip_t)*(1 - s8), -tablet_w/2, t_lid])
+                color([0.55, 0.75, 1, 0.45])
+                    cube([tablet_h, tablet_w, tablet_t]);
+    // didascalia della fase corrente (3D + echo)
+    color("White") didascalia(didascalie[idx_fase() - 1]);
+    echo(str("FASE: ", didascalie[idx_fase() - 1]));
+}
+
+// ------------------------------- INVOCO ------------------------------------
+if (animazione == "nessuna") {
+    if      (mostra == "assieme")   assieme();
+    else if (mostra == "stampa")    piano_stampa();
+    else if (mostra == "base")      color("SteelBlue") base();
+    else if (mostra == "coperchio") coperchio_stampa();
+    else if (mostra == "orecchio")  { orecchio_stampa(1); orecchio_stampa(-1); }
+    else if (mostra == "biella1")   { biella_stampa(1, 1); biella_stampa(1, -1); }
+    else if (mostra == "biella2")   { biella_stampa(2, 1); biella_stampa(2, -1); }
+    else if (mostra == "portellino") portellino_stampa();
+    else echo(str("Modalita' sconosciuta: ", mostra));
+} else {
+    scena_animata();
+}
