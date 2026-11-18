@@ -240,10 +240,16 @@ bielle, perni, apertura, tablet
 
 ![Montaggio completo nelle otto fasi](img/animazione_completa.gif)
 
+**Solo montaggio** — le prime 6 fasi, si ferma a coperchio chiuso
+(`animazione = "assembla"`, 72 frame @ 640×480):
+
+![Assemblaggio: tastiera, orecchie, coperchio, bielle e perni](img/animazione_assemblaggio.gif)
+
 | File | Contenuto | Frame |
 |---|---|---|
 | `img/animazione_apertura.gif` | fasi 7–8 (`animazione = "apri"`): apertura 0→1 e tablet al fermo | 48 @ 800×600 |
 | `img/animazione_completa.gif` | tutte le 8 fasi (`animazione = "tutto"`): montaggio + apertura | 96 @ 640×480 |
+| `img/animazione_assemblaggio.gif` | fasi 1–6 (`animazione = "assembla"`): solo montaggio, resta chiuso | 72 @ 640×480 |
 
 > Le GIF si vedono in anteprima su GitHub/GitLab e in qualunque visualizzatore
 > Markdown che supporti le immagini animate; si vedono anche in VS Code
