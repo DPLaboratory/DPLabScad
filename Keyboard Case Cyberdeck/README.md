@@ -220,7 +220,42 @@ ffmpeg -framerate 12 -i frames/frame%04d.png -pix_fmt yuv420p animazione.mp4
 Per un video più fluido aumenta `--animate` (es. 24 → 192 frame) e
 `-framerate` di conseguenza.
 
-### 5.4 Buone pratiche
+### 5.4 GIF già pronte nel progetto
+
+Nella cartella sono incluse due GIF generate con la CLI di OpenSCAD
+(2026.09.07, `C:\Users\debora.presti\Software\OpenSCAD-2026.09.07-x86-64\openscad.exe`):
+
+| File | Contenuto | Frame |
+|---|---|---|
+| `animazione_apertura.gif` | fasi 7–8 (`animazione = "apri"`): apertura 0→1 e tablet al fermo | 48 @ 800×600 |
+| `animazione_completa.gif` | tutte le 8 fasi (`animazione = "tutto"`): montaggio + apertura | 96 @ 640×480 |
+
+Procedura usata per rigenerarle:
+
+1. si crea una **copia temporanea** del `.scad` con `animazione` impostato
+   (`"apri"` o `"tutto"`; così si evitano problemi di quoting di `-D` su
+   PowerShell);
+2. si renderizzano i frame:
+   ```bat
+   openscad.exe -o apri.png --imgsize=800,600 --animate 48 anim_apri.scad
+   ```
+   → produce `apri00000.png … apri00047.png`;
+3. si assembla la GIF con PIL (loop infinito, ~17 fps, pausa finale sullo
+   stato concluso):
+   ```python
+   from PIL import Image
+   files = sorted(glob.glob("apri0*.png"))
+   imgs  = [Image.open(f).convert("RGB") for f in files]
+   imgs[0].save("animazione_apertura.gif", save_all=True,
+                append_images=imgs[1:], duration=[60]*len(imgs), loop=0,
+                optimize=True)
+   ```
+
+Nota: la didascalia 3D è ancorata al bordo inferiore della vista tramite il
+vettore "su dello schermo" della camera gimbal (`R(vpr)·[0,1,0]`); se cambi
+`$vpd` o la camera, riaggiusta l'offset `215` in `didascalia()`.
+
+### 5.5 Buone pratiche
 
 - L'animazione è la **verifica visiva della cinematica**: dopo ogni modifica ai
   parametri della cerniera riattivala e guarda le fasi 7 (nessun salto, nessun

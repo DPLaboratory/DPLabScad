@@ -535,14 +535,17 @@ function idx_fase() =
     animazione == "apri"     ? (t_eff < 0.5 ? 7 : 8) :
     min(8, floor(t_eff*8) + 1);
 
-// didascalia 3D: rivolta alla camera e ancorata in basso nella vista
+// didascalia 3D: rivolta alla camera e ancorata in basso nella vista.
+// vettore "su dello schermo" della camera gimbal: R(vpr)*[0,1,0] =
+// [-cos(rx)*sin(rz), cos(rx)*cos(rz), sin(rx)]; vpt - 215*up sta quasi al
+// bordo inferiore della vista con vpd = 1250 e vfov di default.
 module didascalia(txt) {
-    up = [sin(vpr_cam[2])*sin(vpr_cam[0]),
-          -cos(vpr_cam[2])*sin(vpr_cam[0]),
-          cos(vpr_cam[0])];
-    translate(vpt_cam - 90*up) rotate(vpr_cam)
-        linear_extrude(2)
-            text(txt, size = 9, halign = "center", valign = "center");
+    up = [-cos(vpr_cam[0])*sin(vpr_cam[2]),
+          cos(vpr_cam[0])*cos(vpr_cam[2]),
+          sin(vpr_cam[0])];
+    translate(vpt_cam - 215*up) rotate(vpr_cam)
+        linear_extrude(3)
+            text(txt, size = 18, halign = "center", valign = "center");
 }
 
 module scena_animata() {
@@ -572,7 +575,7 @@ module scena_animata() {
                 color([0.55, 0.75, 1, 0.45])
                     cube([tablet_h, tablet_w, tablet_t]);
     // didascalia della fase corrente (3D + echo)
-    color("White") didascalia(didascalie[idx_fase() - 1]);
+    color("Black") didascalia(didascalie[idx_fase() - 1]);
     echo(str("FASE: ", didascalie[idx_fase() - 1]));
 }
 
