@@ -91,6 +91,8 @@ mag_p2   = 0.75;  // posizione 2 lungo Lu (frazione) [-]
 foro_prof = 4;    // profondita' fori ciechi dei perni B (dalla faccia esterna) [mm]
 pass_w    = 20;   // larghezza passaggio cavi nel tramezzo [mm]
 pass_h    = 10;   // altezza passaggio cavi [mm]
+stampa_perni  = false;        // perni stampati nel piano di stampa (per la prova mini)
+perno_stamp_d = pin_d - 0.1;  // diametro perno stampato (sottodimensionato vs foro)
 
 // Vano posteriore apribile (cavi e accessori)
 vano_d = 50;      // profondita' interna del vano posteriore [mm]
@@ -121,6 +123,12 @@ Yl10 = Ye1 + g;         // faccia interna biella1
 Yl11 = Yl10 + link_t;   // faccia esterna biella1
 Yl20 = Yl11 + g;        // faccia interna biella2
 Yl21 = Yl20 + link_t;   // faccia esterna biella2
+
+// lunghezze dei perni di montaggio (valgono anche per quelli stampati)
+perno_lung_B1 = Yl11 - Yw1 + foro_prof;         // parete + zona orecchio + biella1
+perno_lung_B2 = Yl21 - Yw1 + foro_prof;         // parete + zona orecchio + biella2
+perno_lung_P1 = ear_t + g + link_t;             // orecchio + biella1
+perno_lung_P2 = ear_t + g + link_t + g + link_t; // orecchio + (aria biella1) + biella2
 
 prof_poch = t_lid - g;                        // profondita' tasca tenone
 h_fermo   = tablet_t + 3;                     // fermo = spessore tablet + 3 mm
@@ -276,6 +284,9 @@ echo(str("VERIFICHE (min su 21 pose):  P2-biella1 = ", min_P2L1, " (>=", soglia_
          "B1-biella2 = ", min_B1L2, " (>=", soglia_pin, ")  |  P1-biella2 = ", min_P1L2,
          "  |  B1-coperchio = ", min_B1cop, "  |  ",
          "B2-coperchio = ", min_B2cop, "  |  B2-biella1 = ", min_B2L1, " (>=", soglia_pin, ")"));
+echo(str("PERNI (2 copie ciascuno; diam. ", perno_stamp_d, " se stampati):  P1 = ",
+         perno_lung_P1, "  B1 = ", perno_lung_B1, "  P2 = ", perno_lung_P2,
+         "  B2 = ", perno_lung_B2));
 
 // ---------------------------- MODULI BASE ----------------------------------
 // Estrusione lungo Y di un profilo 2D (x = u, y = v): occupa Y in [-h, 0],
@@ -396,9 +407,10 @@ module profilo_orecchio() {
             // tenone nella piastra
             translate([lp1_u, -piv_v])
                 square([lp2_u - lp1_u, piv_v + prof_poch]);
-            // fori dei perni P1/P2 (orecchio <-> bielle)
-            for (lp = [lp1, lp2]) translate(lp) circle(d = pin_d + 0.4);
         }
+        // fori dei perni P1/P2 (orecchio <-> bielle): vanno TAGLIATI,
+        // non aggiunti (errore corretto: prima erano nell'unione)
+        for (lp = [lp1, lp2]) translate(lp) circle(d = pin_d + 0.4);
         // zona libera per i perni B1/B2: fascia circolare (raggio L_i attorno
         // a lp_i) spazzata dal perno fisso durante l'apertura, delimitata in
         // angolo dal percorso reale. Con i valori predefiniti resta fuori dal
@@ -511,6 +523,24 @@ module perni_in_posa(t, off = 0) {
     }
 }
 
+// perni stampati (per la prova senza barre): gambo verticale su una
+// linguetta di sostegno da staccare; lunghezze identiche al montaggio
+module perno_stampato(lung) cylinder(h = lung, d = perno_stamp_d);
+
+module perni_stampa() {
+    spes_ling = 0.4;      // spessore linguetta (2 strati a 0.2)
+    larg_ling = 4;        // larghezza linguetta
+    passo     = 8;        // passo fra i perni
+    translate([-passo/2, -larg_ling/2, 0])
+        cube([passo*8, larg_ling, spes_ling]);
+    // ordine: 2xP1, 2xB1, 2xP2, 2xB2
+    for (i = [0:7])
+        translate([i*passo, 0, 0])
+            perno_stampato(i < 2 ? perno_lung_P1 :
+                           i < 4 ? perno_lung_B1 :
+                           i < 6 ? perno_lung_P2 : perno_lung_B2);
+}
+
 // --------------------------- 6. FANTASMI -----------------------------------
 module corpo_tastiera() {
     kc   = 0.25*kb_h;                           // altezza keycap fantasma
@@ -543,6 +573,7 @@ ps_x_orecchio  = ps_x_coperchio + Lu + ps_gap;
 ps_x_biella1   = ps_x_orecchio + (lp2_u - lp1_u + 2*ear_r) + ps_gap;
 ps_x_biella2   = ps_x_biella1 + L1 + ps_gap;
 ps_x_porta     = ps_x_biella2 + L2 + ps_gap;
+ps_x_perni     = ps_x_porta + (porta_aperta ? porta_l + ps_gap : 0);
 
 module coperchio_stampa() translate([ps_x_coperchio, 0, 0])
     color("Peru") coperchio_solido();          // faccia posteriore sul letto
@@ -562,6 +593,7 @@ module biella_stampa(tipo, sy)
 module piano_stampa() {
     color("SteelBlue") base();
     if (porta_aperta) portellino_stampa();
+    if (stampa_perni) translate([ps_x_perni, 0, 0]) color("Silver") perni_stampa();
     coperchio_stampa();
     orecchio_stampa(1);
     orecchio_stampa(-1);
