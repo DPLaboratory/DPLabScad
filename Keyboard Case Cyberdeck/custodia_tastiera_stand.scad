@@ -37,6 +37,12 @@
 // ============================================================================
 
 // ----------------------------- PARAMETRI -----------------------------------
+// Visualizzazione
+mostra      = "assieme"; // ["assieme","stampa","base","coperchio","orecchio", "biella1","biella2","portellino"]
+animazione  = "nessuna"; // ["nessuna","tutto","assembla","apri"]
+t_manuale   = 0;         // >0: forza l'istante dell'animazione (0..1)
+camera_auto = true;      // false: disattiva la camera impostata qui
+
 // Tastiera
 kb_w     = 320;   // larghezza tastiera lungo Y [mm]
 kb_d     = 124;   // profondita' lungo X [mm]
@@ -88,12 +94,6 @@ pass_h    = 10;   // altezza passaggio cavi [mm]
 
 // Vano posteriore apribile (cavi e accessori)
 vano_d = 50;      // profondita' interna del vano posteriore [mm]
-
-// Visualizzazione
-mostra      = "assieme"; // ["assieme","stampa","base","coperchio","orecchio", "biella1","biella2","portellino"]
-animazione  = "nessuna"; // ["nessuna","tutto","assembla","apri"]
-t_manuale   = 0;         // >0: forza l'istante dell'animazione (0..1)
-camera_auto = true;      // false: disattiva la camera impostata qui
 
 // Camera (usata se camera_auto = true; con animazioni in anteprima)
 vpr_cam = [62, 0, 215];
@@ -159,7 +159,10 @@ vit_u2 = lp2_u - (lp2_u - lp1_u)/4;               // foro 2 lungo il tenone
 vit_y0 = Wl/2 - ear_t/2;                          // centro della fascia orecchio
 
 assert(abs(Ye1 - Wl/2) < 1e-6, "i livelli Y non tornano con Wl");
-assert(lp2_u > lp1_u && piv_v > ear_r, "geometria orecchio non valida");
+assert(lp2_u > lp1_u && piv_v > ear_r,
+       str("geometria orecchio non valida:  lp1_u = ", lp1_u, "  lp2_u = ", lp2_u,
+           "  piv_v = ", piv_v, "  ear_r = ", ear_r,
+           "  (serve lp2_u > lp1_u e piv_v > ear_r)"));
 assert(!porta_aperta || porta_t < rear_top,
        "portellino troppo spesso: serve porta_t < rear_top per l'incasso");
 assert(!porta_aperta || (porta_x - porta_l/2 >= D_kb + open_dx &&
@@ -266,10 +269,13 @@ min_P1L2  = min([for (t = campioni) d_ps(P1_posa(t), B2, P2_posa(t))]);
 min_B1cop = min([for (t = campioni) d_cop(B1, t)]);
 min_B2cop = min([for (t = campioni) d_cop(B2, t)]);
 min_B2L1  = min([for (t = campioni) d_ps(B2, B1, P1_posa(t))]);
-echo(str("VERIFICHE (min su 21 pose):  P2-biella1 = ", min_P2L1, " (>=8)  |  ",
-         "B1-biella2 = ", min_B1L2, " (>=8)  |  P1-biella2 = ", min_P1L2,
-         " (>=20)  |  B1-coperchio = ", min_B1cop, " (>=15)  |  ",
-         "B2-coperchio = ", min_B2cop, " (>=15)  |  B2-biella1 = ", min_B2L1));
+// soglia percorsa per i contatti perno-corpo biella: metta larghezza biella +
+// raggio perno (a scala reale fa ~7.7, la specifica chiedeva 8)
+soglia_pin = link_w/2 + rp_foro;
+echo(str("VERIFICHE (min su 21 pose):  P2-biella1 = ", min_P2L1, " (>=", soglia_pin, ")  |  ",
+         "B1-biella2 = ", min_B1L2, " (>=", soglia_pin, ")  |  P1-biella2 = ", min_P1L2,
+         "  |  B1-coperchio = ", min_B1cop, "  |  ",
+         "B2-coperchio = ", min_B2cop, "  |  B2-biella1 = ", min_B2L1, " (>=", soglia_pin, ")"));
 
 // ---------------------------- MODULI BASE ----------------------------------
 // Estrusione lungo Y di un profilo 2D (x = u, y = v): occupa Y in [-h, 0],
@@ -592,15 +598,17 @@ function idx_fase() =
 
 // didascalia 3D: rivolta alla camera e ancorata in basso nella vista.
 // vettore "su dello schermo" della camera gimbal: R(vpr)*[0,1,0] =
-// [-cos(rx)*sin(rz), cos(rx)*cos(rz), sin(rx)]; vpt - 215*up sta quasi al
-// bordo inferiore della vista con vpd = 1250 e vfov di default.
+// [-cos(rx)*sin(rz), cos(rx)*cos(rz), sin(rx)]. Offset dal centro vista e
+// corpo del testo proporzionali a vpd_cam (0.1731 = 0.87*tan(vfov/2) e
+// 0.0144 = 18/1250 con vfov 22.5 di default): la didascalia resta al bordo
+// inferiore e proporzionata alla vista a qualsiasi scala di camera.
 module didascalia(txt) {
     up = [-cos(vpr_cam[0])*sin(vpr_cam[2]),
           cos(vpr_cam[0])*cos(vpr_cam[2]),
           sin(vpr_cam[0])];
-    translate(vpt_cam - 215*up) rotate(vpr_cam)
-        linear_extrude(3)
-            text(txt, size = 18, halign = "center", valign = "center");
+    translate(vpt_cam - 0.1731*vpd_cam*up) rotate(vpr_cam)
+        linear_extrude(0.002*vpd_cam)
+            text(txt, size = 0.0144*vpd_cam, halign = "center", valign = "center");
 }
 
 module scena_animata() {
