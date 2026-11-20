@@ -5,10 +5,11 @@
 //  cavo per i cavi e gli accessori, chiuso da una piastra superiore (che fa
 //  anche da finecorsa dell'apertura) e apribile tramite un portellino a
 //  incasso con foro pollice.
-//  Base e coperchio (i pezzi piu' lunghi) si possono stampare in DUE META'
-//  con giunzione a INCASTO A PETTINE (parametro splitta): denti press-fit
-//  allineano le parti, si oppongono allo strappo e la colla completa il
-//  fissaggio. Vedere i moduli meta_incastro_A/B e la vista mostra="incasto".
+//  Base, coperchio e portellino si possono stampare in DUE META'
+//  con giunzione a INCASTO A PETTINE (parametri splitta, splitta_porta):
+//  denti press-fit allineano le parti, si oppongono allo strappo e la colla
+//  completa il fissaggio. Vedere i moduli meta_incastro_A/B, le viste
+//  mostra="incasto" e la sezione 6.1 del README.
 //  Il coperchio NON ruota su un perno fisso: e' vincolato da una cerniera a
 //  QUADRILATERO ARTICOLATO (four-bar linkage) presente su ENTRAMBI i lati,
 //  quindi retrocede e si inclina contemporaneamente. Aperto a 70 gradi forma
@@ -44,7 +45,7 @@
 $fn  = 32;
 
 /* [Visualizzazione] */
-mostra      = "assieme"; // ["assieme","stampa","base","base_a","base_b","coperchio","coperchio_a","coperchio_b","incasto","orecchio","biella1","biella2","portellino"]
+mostra      = "assieme"; // ["assieme","stampa","base","base_a","base_b","coperchio","coperchio_a","coperchio_b","porta_a","porta_b","incasto","orecchio","biella1","biella2","portellino"]
 animazione  = "nessuna"; // ["nessuna","tutto","assembla","apri"]
 t_manuale   = 0;         // >0: forza l'istante dell'animazione (0..1)
 camera_auto = true;      // false: disattiva la camera impostata qui
@@ -120,6 +121,9 @@ seam_cop_y  = 0;     // quota Y della giunzione del coperchio, rif. locale [mm]
 n_denti     = 6;     // numero di denti per giunzione (alternati ai vuoti)
 dent_d      = 10;    // profondita' del dente attraverso la giunzione [mm]
 inc_gioco   = 0.25;  // gioco laterale e di fondo dente/predella [mm]
+splitta_porta = true;  // divide anche il portellino (lungo ~280 mm) in due meta'
+n_denti_porta = 2;     // denti della giunzione del portellino
+dent_d_porta  = 8;     // profondita' del dente del portellino (pezzo sottile) [mm]
 
 // ---------------------- GRANDEZZE DERIVATE --------------------------------
 D_kb = kb_d + 2*wall_f;                       // profondita' vano tastiera
@@ -173,6 +177,10 @@ porta_w       = Wi - 2*porta_cornice; // larghezza portellino lungo Y [mm]
 
 porta_x = D_kb + open_dx + (Lu - wall_f - D_kb - open_dx)/2; // centro portellino
 
+// giunzione del portellino, nel suo riferimento (y 0..dw): di default sta
+// appena dietro il foro pollice, cosi' il foro resta intero nella meta' B
+seam_porta_y = (porta_w - 2*porta_gioco)/2 - porta_foro_l;  // [mm]
+
 // Fissaggio coperchio-orecchio: fori passanti per viti o perni, in aggiunta
 // alla colla del tenone (2 fori per orecchio, nella fascia dell'orecchio).
 // Il foro attraversa piastra + tenone + corpo dell'orecchio (esce in basso):
@@ -223,11 +231,19 @@ assert(!splitta || abs(seam_cop_y) < Wl/2 - 1,
        "giunzione coperchio fuori dal pezzo");
 assert(!splitta || (inc_gioco > 0 && inc_gioco <= 0.6),
        "inc_gioco deve essere > 0 e contenuto (max 0.6)");
+assert(!splitta_porta || (seam_porta_y > dent_d_porta + 1 &&
+                          seam_porta_y < (porta_w - 2*porta_gioco) - dent_d_porta - 1),
+       "giunzione portellino troppo vicina ai bordi");
+assert(!splitta_porta ||
+       (seam_porta_y + dent_d_porta + inc_gioco < (porta_w - 2*porta_gioco)/2 - porta_foro_l/2 ||
+        seam_porta_y > (porta_w - 2*porta_gioco)/2 + porta_foro_l/2),
+       "la giunzione del portellino finisce nel foro pollice: sposta seam_porta_y");
 
 vista_layout = mostra == "stampa" || mostra == "incasto" ||
                mostra == "base"    || mostra == "coperchio" ||
                mostra == "base_a"  || mostra == "base_b"    ||
-               mostra == "coperchio_a" || mostra == "coperchio_b";
+               mostra == "coperchio_a" || mostra == "coperchio_b" ||
+               mostra == "porta_a" || mostra == "porta_b";
 
 $vpr = camera_auto ? (vista_layout ? vpr_lay : vpr_cam) : [55, 0, 25];
 $vpt = camera_auto ? (vista_layout ? vpt_lay : vpt_cam) : [100, 0, 40];
@@ -450,14 +466,14 @@ module coperchio_in_posa(t) in_coperchio(t) color("Peru") coperchio_solido();
 // giunzione. Le meta' incollate riproducono il pezzo intero: assieme e
 // animazione usano la geometria intera, il piano di stampa le meta'.
 
-module meta_incastro_A(y0, L, d_d, gioco) {
-    seg = L/(2*n_denti);                       // celle alternate dente/vuoto
+module meta_incastro_A(y0, L, n_d, d_d, gioco) {
+    seg = L/(2*n_d);                           // celle alternate dente/vuoto
     intersection() {
         union() {
             // meta' A: tutto il solido con y < y0
             translate([0, y0 - 1000, -1]) cube([L, 1000, 1000]);
             // denti a pettine: partono da dentro la meta' A e sporgono oltre
-            for (i = [0:n_denti-1])
+            for (i = [0:n_d-1])
                 translate([2*i*seg, y0 - 0.5, -1])
                     cube([seg, 0.5 + d_d, 1000]);
         }
@@ -465,8 +481,8 @@ module meta_incastro_A(y0, L, d_d, gioco) {
     }
 }
 
-module meta_incastro_B(y0, L, d_d, gioco) {
-    seg = L/(2*n_denti);
+module meta_incastro_B(y0, L, n_d, d_d, gioco) {
+    seg = L/(2*n_d);
     difference() {
         intersection() {
             // meta' B: tutto il solido con y >= y0
@@ -474,16 +490,20 @@ module meta_incastro_B(y0, L, d_d, gioco) {
             children(0);
         }
         // predelle: cavita' dei denti, maggiorate del gioco (lato e fondo)
-        for (i = [0:n_denti-1])
+        for (i = [0:n_d-1])
             translate([2*i*seg - gioco, y0, -1])
                 cube([seg + 2*gioco, d_d + gioco, 1000]);
     }
 }
 
-module meta_base_A() meta_incastro_A(seam_base_y, Lu, dent_d, inc_gioco) base();
-module meta_base_B() meta_incastro_B(seam_base_y, Lu, dent_d, inc_gioco) base();
-module meta_coperchio_A() meta_incastro_A(seam_cop_y, Lu, dent_d, inc_gioco) coperchio_solido();
-module meta_coperchio_B() meta_incastro_B(seam_cop_y, Lu, dent_d, inc_gioco) coperchio_solido();
+module meta_base_A() meta_incastro_A(seam_base_y, Lu, n_denti, dent_d, inc_gioco) base();
+module meta_base_B() meta_incastro_B(seam_base_y, Lu, n_denti, dent_d, inc_gioco) base();
+module meta_coperchio_A() meta_incastro_A(seam_cop_y, Lu, n_denti, dent_d, inc_gioco) coperchio_solido();
+module meta_coperchio_B() meta_incastro_B(seam_cop_y, Lu, n_denti, dent_d, inc_gioco) coperchio_solido();
+// portellino: giunzione nel suo riferimento (y 0..porta_w-2*porta_gioco),
+// comb lungo X con denti piu' fitti e meno profondi (pezzo sottile)
+module meta_porta_A() meta_incastro_A(seam_porta_y, porta_l, n_denti_porta, dent_d_porta, inc_gioco) portellino();
+module meta_porta_B() meta_incastro_B(seam_porta_y, porta_l, n_denti_porta, dent_d_porta, inc_gioco) portellino();
 
 // ------------------------------ 3. ORECCHIO --------------------------------
 // Profilo 2D nel riferimento del coperchio: inviluppo convesso di due cerchi
@@ -684,17 +704,32 @@ module base_stampa() {
     else color("SteelBlue") base();
 }
 
-// vista di controllo della giunzione: base e coperchio in due meta',
-// allontanate per ispezionare denti e predelle
+// vista di controllo della giunzione: base, coperchio e portellino in due
+// meta', allontanate per ispezionare denti e predelle
 module vista_incastro() {
     espl = 2*ps_gap;                           // allontanamento per l'ispezione
     translate([0, -(Wt/2 + espl), 0]) color("SteelBlue") meta_base_A();
     translate([0, (Wt/2 + espl), 0]) color("CornflowerBlue") meta_base_B();
     translate([ps_x_coperchio, -(Wl/2 + espl), 0]) color("Peru") meta_coperchio_A();
     translate([ps_x_coperchio, (Wl/2 + espl), 0]) color("Chocolate") meta_coperchio_B();
+    if (porta_aperta) {
+        if (splitta_porta) {
+            translate([ps_x_porta, -espl - seam_porta_y, 0]) color("SteelBlue") meta_porta_A();
+            translate([ps_x_porta, espl - seam_porta_y, 0]) color("CornflowerBlue") meta_porta_B();
+        } else {
+            translate([ps_x_porta, -(porta_w - 2*porta_gioco)/2, 0]) color("SteelBlue") portellino();
+        }
+    }
 }
-module portellino_stampa() color("SteelBlue")
-    translate([ps_x_porta, -(porta_w - 2*porta_gioco)/2, 0]) portellino();
+module porta_a() color("SteelBlue")
+    translate([ps_x_porta, -ps_gap - seam_porta_y, 0]) meta_porta_A();
+module porta_b() color("CornflowerBlue")
+    translate([ps_x_porta, ps_gap - seam_porta_y, 0]) meta_porta_B();
+module portellino_stampa() {
+    if (splitta && splitta_porta) { porta_a(); porta_b(); }
+    else color("SteelBlue")
+        translate([ps_x_porta, -(porta_w - 2*porta_gioco)/2, 0]) portellino();
+}
 module orecchio_stampa(sy)
     color("Goldenrod")
         translate([ps_x_orecchio - (lp1_u - ear_r), sy*(ear_t/2 + 10),
@@ -800,6 +835,8 @@ if (animazione == "nessuna") {
     else if (mostra == "coperchio") coperchio_stampa();
     else if (mostra == "coperchio_a") coperchio_a();
     else if (mostra == "coperchio_b") coperchio_b();
+    else if (mostra == "porta_a")   porta_a();
+    else if (mostra == "porta_b")   porta_b();
     else if (mostra == "incasto")   vista_incastro();
     else if (mostra == "orecchio")  { orecchio_stampa(1); orecchio_stampa(-1); }
     else if (mostra == "biella1")   { biella_stampa(1, 1); biella_stampa(1, -1); }

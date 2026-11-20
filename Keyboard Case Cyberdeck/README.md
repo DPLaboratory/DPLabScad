@@ -41,7 +41,7 @@ parete base | orecchio | biella1 | biella2
 I perni B1/B2 attraversano: parete + orecchio (zona libera) + biella;
 i perni P1/P2 collegano orecchio e biella.
 
-### Componenti stampati (7 pezzi)
+### Componenti stampati (7 pezzi, fino a 10 con la suddivisione)
 
 1. **base** – vasca con vano tastiera frontale, vano posteriore per cavi e
    accessori (**apribile con portellino a incasso**), passaggio cavi nel
@@ -56,6 +56,11 @@ i perni P1/P2 collegano orecchio e biella.
 
 Non stampati: **4 perni da 3 mm** (B1, B2, P1, P2 per lato) — barre, filo
 lisciato o filamento.
+
+> **Suddivisione per letti piccoli** (`splitta = true`, predefinita): base,
+> coperchio e portellino — i tre pezzi più lunghi — vengono generati come
+> **due metà ciascuno** con giunzione a **incasto a pettine**: in tutto
+> 12 pezzi stampati. Vedere la [§6.1](#61-suddivisione-in-metà-con-incasto-a-pettine).
 
 ---
 
@@ -108,6 +113,7 @@ VERIFICHE:  P2-biella1 = 9.9 (>=8) | B1-biella2 = 11.0 (>=8) |
 | Vano posteriore | `vano_d` | profondità interna: se cresce allunga la base |
 | Portellino | `porta_aperta, porta_l, porta_cornice, porta_w, porta_t, porta_lip, porta_gioco, porta_foro_l, porta_foro_d, porta_foro_dx, porta_x` | a incasso, a filo, con foro pollice |
 | Fissaggio orecchie | `usa_viti_orecchio, vit_d, vit_gioco, vit_svaso, vit_svaso_d` | fori passanti viti/perni Ø3 tra coperchio e orecchie |
+| Suddivisione stampa | `splitta, seam_base_y, seam_cop_y, n_denti, dent_d, inc_gioco, splitta_porta, seam_porta_y, n_denti_porta, dent_d_porta` | incasto a pettine per stampare base, coperchio e portellino in due metà (vedi §6.1) |
 | Magneti | `usa_magneti, mag_d, mag_h, mag_p1, mag_p2` | 4×2 mm, 2 per lato |
 | Vista | `mostra, animazione, t_manuale, camera_auto` | vedi sotto |
 
@@ -160,19 +166,30 @@ Cambia la variabile `mostra` e premi **F5** (preview) o **F6** (render):
 | `mostra` | Contenuto |
 |---|---|
 | `"assieme"` | tutto montato nella posa aperta (con perni e portellino) |
-| `"stampa"` | pezzi disposti piatti sul piano di stampa |
-| `"base"` / `"coperchio"` | singolo pezzo |
+| `"stampa"` | pezzi disposti piatti sul piano di stampa (metà se `splitta`) |
+| `"base"` / `"coperchio"` | pezzo in assetto di stampa (le 2 metà se `splitta`) |
+| `"base_a"` / `"base_b"` / `"coperchio_a"` / `"coperchio_b"` / `"porta_a"` / `"porta_b"` | singola metà, per esportarla come STL dedicato |
+| `"incasto"` | metà di base e coperchio allontanate per ispezionare la giunzione |
 | `"orecchio"` / `"biella1"` / `"biella2"` / `"portellino"` | le 2 copie in assetto di stampa |
+
+Per le viste di layout (`stampa`, `incasto`, `base*`, `coperchio*`) la camera si
+allarga automaticamente per inquadrare l'intero piano.
 
 ### Esportare gli STL da riga di comando
 
 ```bat
 openscad -o base.stl        custodia_tastiera_stand.scad -D "mostra=\"base\""
+openscad -o base_a.stl      custodia_tastiera_stand.scad -D "mostra=\"base_a\""
+openscad -o base_b.stl      custodia_tastiera_stand.scad -D "mostra=\"base_b\""
 openscad -o coperchio.stl   custodia_tastiera_stand.scad -D "mostra=\"coperchio\""
+openscad -o coperchio_a.stl custodia_tastiera_stand.scad -D "mostra=\"coperchio_a\""
+openscad -o coperchio_b.stl custodia_tastiera_stand.scad -D "mostra=\"coperchio_b\""
 openscad -o orecchio.stl    custodia_tastiera_stand.scad -D "mostra=\"orecchio\""
 openscad -o biella1.stl     custodia_tastiera_stand.scad -D "mostra=\"biella1\""
 openscad -o biella2.stl     custodia_tastiera_stand.scad -D "mostra=\"biella2\""
 openscad -o portellino.stl  custodia_tastiera_stand.scad -D "mostra=\"portellino\""
+openscad -o porta_a.stl     custodia_tastiera_stand.scad -D "mostra=\"porta_a\""
+openscad -o porta_b.stl     custodia_tastiera_stand.scad -D "mostra=\"porta_b\""
 openscad -o assieme.stl     custodia_tastiera_stand.scad -D "mostra=\"assieme\""
 ```
 
@@ -263,7 +280,7 @@ Per un video più fluido aumenta `--animate` (es. 24 → 192 frame) e
 
 Nel progetto sono incluse due GIF (cartella [`img/`](img/)) generate con la CLI
 di OpenSCAD (2026.09.07,
-`C:\Users\debora.presti\Software\OpenSCAD-2026.09.07-x86-64\openscad.exe`).
+`C:\Users\debora.presti\Software\OpenSCAD\openscad.exe`, versione 2026.11-RC0).
 
 **Funzionamento — apertura 0→1 e tablet che scorre fino al fermo**
 (fasi 7–8, `animazione = "apri"`, 48 frame @ 800×600):
@@ -330,9 +347,9 @@ vettore "su dello schermo" della camera gimbal (`R(vpr)·[0,1,0]`); se cambi
 
 ## 6. Stampa e montaggio
 
-- **Letto di stampa**: il coperchio misura **≈ 340 × 195 mm**: serve un piatto
-  grande (o dividilo in due sezioni e giunale le piastre, ad esempio con
-  rincalzo e cianoacrilato).
+- **Letto di stampa**: con `splitta = true` (predefinita) base e coperchio si
+  dividono in **metà ≈ 195 × 166 / 195 × 170 mm**: entrano su un piatto
+  220 × 220 (o anche 200 × 200 per le metà della base).
 - **Materiale**: PETG o ABS consigliati per la base (rigidità + resistenza
   termica al sole); il coperchio-stand è meglio in PETG/ABS pieno.
 - **Parametri suggeriti**: 0.2 mm di strato, 3 perimetrature, riempimento
@@ -340,17 +357,65 @@ vettore "su dello schermo" della camera gimbal (`R(vpr)·[0,1,0]`); se cambi
   con 6 perimetrature (i perni lavorano a compressione sui fori).
 - **Portellino**: si stampa piatto, lato grande sul letto, senza supporti.
 - **Supporti**: non necessari in nessun pezzo (tutti i fori orizzontali sono
-  passanti o ciechi dal lato esterno).
+  passanti o ciechi dal lato esterno; anche le facce di giunzione sono
+  verticali).
 - **Montaggio**:
-  1. incolla le orecchie nelle tasche del coperchio (il tenone entra nella
+  1. se `splitta`: **incasta e incolla le metà** (vedi §6.1) e lascia
+     polymerizzare prima di continuare,
+  2. incolla le orecchie nelle tasche del coperchio (il tenone entra nella
      tasca; cianoacrilato o epossidica),
-  2. fissa ogni orecchio con **2 viti o perni Ø3 passanti** (`usa_viti_orecchio`):
+  3. fissa ogni orecchio con **2 viti o perni Ø3 passanti** (`usa_viti_orecchio`):
      il foro esce sotto l'orecchio, quindi si può usare un perno incollato o
      una vite con dado (o autofilante in pressione nel foro Ø3.2),
-  3. appoggia il coperchio chiuso sulla base: i fori di B1/B2 si allineano,
-  4. inserisci le bielle di lato nelle rispettive fasce Y,
-  5. spingi i **perni da 3 mm** dall'esterno (B1/B2 attraversano parete +
+  4. appoggia il coperchio chiuso sulla base: i fori di B1/B2 si allineano,
+  5. inserisci le bielle di lato nelle rispettive fasce Y,
+  6. spingi i **perni da 3 mm** dall'esterno (B1/B2 attraversano parete +
      orecchio + biella; P1/P2 orecchio + biella).
+
+### 6.1 Suddivisione in metà con incasto a pettine
+
+Con `splitta = true` (predefinita) **base**, **coperchio** e, con
+`splitta_porta = true`, anche il **portellino** (~280 mm lungo) vengono
+generati come **due metà ciascuno**. La base e il coperchio si dividono lungo
+il piano Y = `seam_base_y` / `seam_cop_y` (predefinito: al centro, y = 0); il
+portellino si divide lungo il suo riferimento locale a `seam_porta_y`
+(predefinito: **appena dietro il foro pollice**, che così resta intero in una
+sola metà). La giunzione è un **incasto a pettine**: la metà A (y minore)
+porta i denti (lunghezza `Lu/(2·n_denti)` per base/coperchio,
+`porta_l/(2·n_denti_porta)` per il portellino; profondità `dent_d` /
+`dent_d_porta`); la metà B ha le **predelle** maggiorate del gioco
+`inc_gioco`. Le metà si incastrano **scorrendo lungo +Y**:
+
+- il pettine **allinea** le parti con precisione (niente riferimenti a
+  occhio), 
+- si oppone a **strappo** (y), **taglio** (x) e flessione del giunto,
+- la colla (epossidica consigliata: i tagli attraversano fondo, pareti e
+  piastra) completa il fissaggio; le metà incollate riproducono il pezzo
+  intero, quindi assieme e animazione non cambiano.
+
+**Controlli e uso:**
+
+- vista `mostra = "incasto"`: le metà allontanate per ispezionare denti e
+  predelle (base, coperchio e portellino); è la verifica da fare **dopo ogni
+  cambio di `n_denti`, `dent_d`, `inc_gioco` o delle quote `seam_*`**;
+- esportazione per pezzo: `mostra = "base_a" / "base_b" / "coperchio_a" /
+  "coperchio_b" / "porta_a" / "porta_b"` → un STL per metà, pronto per lo
+  slicer;
+- il taglio attraversa anche tramezzo, passaggio cavi, piastra posteriore e
+  seduta del portellino: le metà si riallineano da sole grazie al pettine;
+- le zone critiche di base e coperchio (tasche orecchie, fori viti, fori perni
+  B) sono lontane dalla giunzione di default; se sposti `seam_*_y`, verifica
+  con la vista `incasto` che non intersechi quelle zone;
+- il taglio del portellino è posizionato per **non attraversare il foro
+  pollice**: un `assert` blocca la compilazione se `seam_porta_y` finisce
+  nella zona del foro (spostalo avanti/indietro a mano);
+- `splitta = false` (e `splitta_porta = false`) riproducono il comportamento
+  precedente (pezzi interi).
+
+**Stampa delle metà**: stesso assetto dei pezzi interi (base com'è, coperchio
+a faccia posteriore sul letto), facce di giunzione verticali → nessun
+supporto. Con `inc_gioco` troppo stretto le metà non entrano: allargalo a
+0.3–0.4 mm o leggi la prima impressione con la vista `incasto`.
 
 ---
 
@@ -358,14 +423,18 @@ vettore "su dello schermo" della camera gimbal (`R(vpr)·[0,1,0]`); se cambi
 
 ```
 PARAMETRI ................ tastiera, tablet, spessori, cerniera, vano,
-                          portellino, magneti, vista/camera
-GRANDEZZE DERIVATE ....... D_kb, Ztop, Lu, Wi, Wt, Wl, livelli Y, assert
+                          portellino, viti orecchie, suddivisione, magneti,
+                          vista/camera
+GRANDEZZE DERIVATE ....... D_kb, Ztop, Lu, Wi, Wt, Wl, livelli Y, dent_l,
+                           assert
 CINEMATICA 2D (x, z) ..... rot2, ang_v, bialetta (sintesi), intersez_cerchi,
                           segno_ramo, posa(t), loc_cop + echo verifiche
 MODULI ................... estrusa_y, base, portellino, coperchio_solido,
                           in_coperchio, profilo_orecchio (+ zona_libera_2d),
-                          biella, perno_sxy/perni_in_posa, fantasmi
-MODALITA' DI VISTA ....... assieme, piano_stampa, stampa singoli pezzi
+                          biella, perno_sxy/perni_in_posa, fantasmi,
+                          meta_incastro_A/B + meta_base/coperchio/porta_A/B
+MODALITA' DI VISTA ....... assieme, piano_stampa, stampa singoli pezzi e
+                          meta' (base_a..porta_b), vista_incastro
 ANIMAZIONE ............... sstep, fase(i), didascalie, didascalia 3D,
                           scena_animata
 INVOCO ................... scelta per `mostra` / `animazione`
