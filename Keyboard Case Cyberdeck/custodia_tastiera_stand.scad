@@ -36,12 +36,24 @@
 //  Solo OpenSCAD standard, nessuna libreria esterna.
 // ============================================================================
 
-// ----------------------------- PARAMETRI -----------------------------------
-// Visualizzazione
+/* [Globali] */
+$fn  = 32;
+
+/* [Visualizzazione] */
 mostra      = "assieme"; // ["assieme","stampa","base","coperchio","orecchio", "biella1","biella2","portellino"]
 animazione  = "nessuna"; // ["nessuna","tutto","assembla","apri"]
 t_manuale   = 0;         // >0: forza l'istante dell'animazione (0..1)
 camera_auto = true;      // false: disattiva la camera impostata qui
+
+// Camera (usata se camera_auto = true; con animazioni in anteprima)
+vpr_cam = [62, 0, 215];
+vpt_cam = [100, 0, 70];
+vpd_cam = 1250;
+$vpr = camera_auto ? vpr_cam : [55, 0, 25];
+$vpt = camera_auto ? vpt_cam : [100, 0, 40];
+$vpd = camera_auto ? vpd_cam : 900;
+
+/* [Tastiera] */
 
 // Tastiera
 kb_w     = 320;   // larghezza tastiera lungo Y [mm]
@@ -49,12 +61,12 @@ kb_d     = 124;   // profondita' lungo X [mm]
 kb_h     = 32;    // altezza totale, keycap inclusi [mm]
 tol      = 0.6;   // gioco diametro/pareti [mm]
 
-// Tablet
+/* [Tablet] */
 tablet_w = 250;   // larghezza tablet lungo Y [mm]
 tablet_h = 175;   // altezza tablet lungo il coperchio [mm]
 tablet_t = 8;     // spessore tablet [mm]
 
-// Spessori
+/* [Spessori] */
 floor_t  = 3;     // fondo della vasca [mm]
 wall_f   = 3;     // parete frontale e tramezzo [mm]
 wall_s   = 5;     // pareti laterali [mm]
@@ -65,7 +77,7 @@ lip_t    = 4;     // spessore (lungo u) del fermo del tablet [mm]
 guide_t  = 4;     // spessore/altezza delle guide laterali tablet [mm]
 guide_l  = 45;    // lunghezza delle guide laterali lungo u [mm]
 
-// Cerniera
+/* [Cerniera] */
 pin_d    = 3;     // diametro perni (barre da 3 mm, non stampate) [mm]
 link_t   = 4;     // spessore bielle lungo Y [mm]
 ear_t    = 4;     // spessore orecchie lungo Y [mm]
@@ -80,31 +92,32 @@ piv_v    = 12;    // profondita' dei perni sotto la faccia posteriore [mm]
 zb1      = 14;    // quota z del perno fisso B1 [mm]
 zb2      = 18;    // quota z del perno fisso B2 [mm]
 
-// Accessori
+/* [Accessori] */
 usa_magneti = true; // magneti 4x2 sul bordo superiore delle pareti, 2 per lato
 mag_d    = 4;     // diametro magnete [mm]
 mag_h    = 2;     // altezza magnete (profondita' dell'alloggio) [mm]
 mag_p1   = 0.25;  // posizione 1 lungo Lu (frazione) [-]
 mag_p2   = 0.75;  // posizione 2 lungo Lu (frazione) [-]
 
-// Dettagli di stampa/montaggio
+/* [Dettagli di stampa/montaggio] */
 foro_prof = 4;    // profondita' fori ciechi dei perni B (dalla faccia esterna) [mm]
 pass_w    = 20;   // larghezza passaggio cavi nel tramezzo [mm]
 pass_h    = 10;   // altezza passaggio cavi [mm]
 stampa_perni  = false;        // perni stampati nel piano di stampa (per la prova mini)
 perno_stamp_d = pin_d - 0.1;  // diametro perno stampato (sottodimensionato vs foro)
 
-// Vano posteriore apribile (cavi e accessori)
+/* [Vano posteriore apribile (cavi e accessori)] */
 vano_d = 50;      // profondita' interna del vano posteriore [mm]
 
-// Camera (usata se camera_auto = true; con animazioni in anteprima)
-vpr_cam = [62, 0, 215];
-vpt_cam = [100, 0, 70];
-vpd_cam = 1250;
-$vpr = camera_auto ? vpr_cam : [55, 0, 25];
-$vpt = camera_auto ? vpt_cam : [100, 0, 40];
-$vpd = camera_auto ? vpd_cam : 900;
-$fn  = 32;
+porta_aperta  = true;              // abilita il portellino del vano posteriore
+porta_l       = 45;                // lunghezza portellino lungo X [mm]
+porta_cornice = 20;                // cornice libera per lato verso le pareti [mm]
+porta_t       = 2;                 // spessore portellino (minore di rear_top) [mm]
+porta_lip     = 3;                 // larghezza del bordo di appoggio nel fondo [mm]
+porta_gioco   = 0.25;              // gioco laterale portellino/seduta [mm]
+porta_foro_l  = 24;                // lunghezza foro pollice lungo Y [mm]
+porta_foro_d  = 10;                // larghezza foro pollice lungo X [mm]
+porta_foro_dx = 8;                 // distanza foro pollice dal bordo frontale [mm]
 
 // ---------------------- GRANDEZZE DERIVATE --------------------------------
 D_kb = kb_d + 2*wall_f;                       // profondita' vano tastiera
@@ -135,16 +148,9 @@ h_fermo   = tablet_t + 3;                     // fermo = spessore tablet + 3 mm
 rp_foro   = (pin_d + 0.4)/2;                  // raggio fori perni (gioco 0.4)
 
 // Portellino del vano posteriore (a incasso, a filo della piastra)
-porta_aperta  = true;              // abilita il portellino del vano posteriore
-porta_l       = 45;                // lunghezza portellino lungo X [mm]
-porta_cornice = 20;                // cornice libera per lato verso le pareti [mm]
+
 porta_w       = Wi - 2*porta_cornice; // larghezza portellino lungo Y [mm]
-porta_t       = 2;                 // spessore portellino (minore di rear_top) [mm]
-porta_lip     = 3;                 // larghezza del bordo di appoggio nel fondo [mm]
-porta_gioco   = 0.25;              // gioco laterale portellino/seduta [mm]
-porta_foro_l  = 24;                // lunghezza foro pollice lungo Y [mm]
-porta_foro_d  = 10;                // larghezza foro pollice lungo X [mm]
-porta_foro_dx = 8;                 // distanza foro pollice dal bordo frontale [mm]
+
 porta_x = D_kb + open_dx + (Lu - wall_f - D_kb - open_dx)/2; // centro portellino
 
 // Fissaggio coperchio-orecchio: fori passanti per viti o perni, in aggiunta

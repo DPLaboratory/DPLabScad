@@ -115,6 +115,42 @@ Granidezze derivate: `D_kb, Ztop, Lu, Wi, Wt, Wl` e i livelli Y
 (`Yw0…Yl21`). Alcuni `assert` bloccano la compilazione con messaggio chiaro se
 una combinazione di parametri non è coerente (es. `porta_t >= rear_top`).
 
+### 3.1 Modello di prova in miniatura (preset `Test-mini`)
+
+Nel Customizer (o nel file `custodia_tastiera_stand.json`) sono inclusi due
+preset per una **stampa di prova** della cerniera con una tastiera
+**50 × 30 × 10 mm**:
+
+| Preset | `mostra` | Uso |
+|---|---|---|
+| `Test-mini` | `assieme` | controllo visivo dell'assieme aperto |
+| `Test-mini-stampa` | `stampa` | **tutte le parti su un piatto ≈ 348 × 62 mm** |
+
+Poiché `kb_h=10` porta `Ztop` da 38 a 14 mm, i parametri della cerniera sono
+**ricalcolati in scala** nel preset (non bastano quelli del progetto reale):
+`piv_v=4, lp1_u=6, lp2_u=28, zb1=4, zb2=6, open_dx=3, ear_r=3.5, link_w=6,
+link_t=2, ear_t=2, g=0.4, pin_d=2, foro_prof=2`; magneti e fori viti
+disattivati (a questa scala non c'entrano con il test di apertura).
+
+- **Vincolo duro**: `ear_r` deve essere **strettamente minore** di `piv_v`
+  (il gap fra corpo orecchio e piastra è `piv_v − ear_r`; nel preset = 0,5 mm).
+  Alzarlo a 4 con `piv_v=4` fa scattare l'assert di protezione.
+- **Perni**: lunghezze `P1 = 4.4`, `B1 = 6.8`, `P2 = 6.8`, `B2 = 9.2` mm
+  (2 copie ciascuno). Fori Ø2,4 (bielle/orecchie) e Ø2,1 ciechi nelle pareti:
+  con barra da 2 mm il gioco è minimo; con filamento 1,75 c'è più gioco
+  (accettabile per il test, oppure perni stampati a Ø1,9).
+- In cartella ci sono anche **due copie autonome già configurate**
+  (`test_mini_stampa.scad` e `test_mini.scad`) che non dipendono dal
+  Customizer né dal JSON: se il Customizer dovesse applicare valori mescolati,
+  usa direttamente quelle.
+- **Orecchie**: una goccia di colla nelle tasche del coperchio.
+- **Verifica**: gli `echo` a compilazione riportano la sintesi mini
+  (`L1 = 21.5, L2 = 35.3, B1 = [26.7, 4], B2 = [63.1, 6]`) e le distanze
+  minime; animazione di riferimento: `img/test_mini_apertura.gif`.
+- Dopo la stampa: montaggio come al §6 e apertura a mano 0→70°: deve scorrere
+  senza punti duri e il bordo inferiore deve appoggiarsi sulla piastra
+  posteriore (finecorsa).
+
 ---
 
 ## 4. Come visualizzare
