@@ -111,6 +111,7 @@ VERIFICHE:  P2-biella1 = 9.9 (>=8) | B1-biella2 = 11.0 (>=8) |
 | Spessori | `floor_t, wall_f, wall_s, rear_top, top_gap, t_lid, lip_t, guide_t, guide_l` | |
 | Cerniera | `pin_d, link_t, ear_t, g, link_w, ear_r, ang_open, open_dx, lp1_u, lp2_u, piv_v, zb1, zb2` | la sintesi si ricalcola da sola |
 | Vano posteriore | `vano_d` | profondità interna: se cresce allunga la base |
+| Variante compatta | `compatta, lp1_u_c, lp2_u_c, zb1_c, zb2_c, ang_open_c, bielle_gomito, gomito1_f, gomito1_e, gomito2_f, gomito2_e` | retro eliminato, cerniera ricompattata e bielle a gomito (vedi §3.2) |
 | Portellino | `porta_aperta, porta_l, porta_cornice, porta_w, porta_t, porta_lip, porta_gioco, porta_foro_l, porta_foro_d, porta_foro_dx, porta_x` | a incasso, a filo, con foro pollice |
 | Fissaggio orecchie | `usa_viti_orecchio, vit_d, vit_gioco, vit_svaso, vit_svaso_d` | fori passanti viti/perni Ø3 tra coperchio e orecchie |
 | Suddivisione stampa | `splitta, seam_base_y, seam_cop_y, n_denti, dent_d, inc_gioco, splitta_porta, seam_porta_y, n_denti_porta, dent_d_porta` | incasto a pettine per stampare base, coperchio e portellino in due metà (vedi §6.1) |
@@ -156,6 +157,44 @@ disattivati (a questa scala non c'entrano con il test di apertura).
 - Dopo la stampa: montaggio come al §6 e apertura a mano 0→70°: deve scorrere
   senza punti duri e il bordo inferiore deve appoggiarsi sulla piastra
   posteriore (finecorsa).
+
+### 3.2 Variante compatta (`compatta = true`)
+
+Opzione che **elimina del tutto la parte posteriore** (niente vano cavi, piastra,
+portellino o telaio): base e coperchio hanno la **stessa identica impronta del
+vano tastiera** (130 × 331 mm). Perché ciò sia possibile la **cerniera viene
+ricompattata** (solo in questa variante):
+
+| Cosa | Normale (`compatta = false`) | Compatta (`compatta = true`) |
+|---|---|---|
+| Vano cavi + piastra + portellino + telaio posteriore | sì | **no: il retro sparisce** |
+| Lunghezza base e coperchio `Lu_lid` | `Lu` = 195 mm | **`D_kb`** = 130 mm (van tastiera) |
+| Orecchie (perni coperchio) | `lp1_u=25`, `lp2_u=85` | **`lp1_u_c=8`, `lp2_u_c=50`** (in avanti) |
+| Perni fissi B | z = 14/18, B2 a x ≈ 180 (fuorivasca) | **z = 10/10, B1=(77.3, 10), B2=(123.9, 10)** dentro la vasca |
+| Bielle | dritte | **a gomito** (`gomito1/2_f`, `_e`): scivolano oltre i perni P2/B1 |
+| Angolo apertura | `ang_open` = 70° | **`ang_open_c` = 55°** |
+| Uscita cavi | vano posteriore | **fessura nella parete posteriore** (`pass_w × pass_h`), il cavo esce dal retro |
+
+**Perché l'angolo scende a 55°**: con 70° l'invariante di branca del
+quadrilatero impone `B2.x > fermata + 5,5 mm` (il perno B2 finirebbe fuori
+dalla vasca), mentre con il perno sopra la linea dei pivot la cerniera parte
+in affondamento e si inceppa nel bordo. A 55° i tre vincoli (branca, partenza
+pulita, B2 dentrovasca) coesistono: sintesi e margini **verificati in
+Python** (ricerca a griglia su orecchie, quote B e gomiti; tutti i margini
+≥ 8,8 mm) e **rifatti a runtime** dagli `echo`/`assert` del file.
+
+- **Magneti**: posizionati come frazioni di `Lu_lid`, quindi sempre sotto
+  l'area coperta dal coperchio chiuso.
+- **Tablet**: con `Lu_lid = 130` un tablet di 175 mm **sporge** oltre il bordo
+  superiore del coperchio di ~45 mm: se lo vuoi contenuto riduci `tablet_h`
+  (l'`echo` di compilazione te lo ricorda).
+- **Bielle**: con `bielle_gomito = false` (sperimentale) le bielle tornano
+  dritte: in questa geometria gli `assert` di interferenza perno-corpo
+  passano comunque, ma il gomito dà margine maggiore.
+- Compatibile con `splitta` (le metà della base e del coperchio seguono
+  `Lu_lid`).
+- Verifica: `mostra = "assieme"` con `compatta = true`; gli `echo` riportano
+  la nota variante con la sintesi ricompattata.
 
 ---
 
@@ -425,8 +464,8 @@ supporto. Con `inc_gioco` troppo stretto le metà non entrano: allargalo a
 PARAMETRI ................ tastiera, tablet, spessori, cerniera, vano,
                           portellino, viti orecchie, suddivisione, magneti,
                           vista/camera
-GRANDEZZE DERIVATE ....... D_kb, Ztop, Lu, Wi, Wt, Wl, livelli Y, dent_l,
-                           assert
+GRANDEZZE DERIVATE ....... D_kb, Ztop, Lu, Lu_lid, Wi, Wt, Wl, livelli Y,
+                          dent_l, assert
 CINEMATICA 2D (x, z) ..... rot2, ang_v, bialetta (sintesi), intersez_cerchi,
                           segno_ramo, posa(t), loc_cop + echo verifiche
 MODULI ................... estrusa_y, base, portellino, coperchio_solido,

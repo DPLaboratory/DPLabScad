@@ -5,6 +5,14 @@
 //  cavo per i cavi e gli accessori, chiuso da una piastra superiore (che fa
 //  anche da finecorsa dell'apertura) e apribile tramite un portellino a
 //  incasso con foro pollice.
+//  Variante COMPATTA (compatta = true): senza vano cavi, piastra, portellino
+//  e senza alcun telaio posteriore: base e coperchio sono entrambi lunghi
+//  quanto il vano tastiera (D_kb). La cerniera e' RICOMPATTATA (orecchie in
+//  avanti, perni B bassi, bielle a gomito, apertura a ang_open_c): i perni
+//  B1/B2 ricadono dentro le pareti laterali della vasca e il coperchio si
+//  appoggia sul suo bordo posteriore. Con ang_open = 70 cio' e' impossibile
+//  (invariante di branca: B2.x > fermata + 5.5 mm), quindi la variante usa
+//  ang_open_c = 55 gradi, verificata in Python.
 //  Base, coperchio e portellino si possono stampare in DUE META'
 //  con giunzione a INCASTO A PETTINE (parametri splitta, splitta_porta):
 //  denti press-fit allineano le parti, si oppongono allo strappo e la colla
@@ -114,6 +122,24 @@ porta_foro_l  = 24;                // lunghezza foro pollice lungo Y [mm]
 porta_foro_d  = 10;                // larghezza foro pollice lungo X [mm]
 porta_foro_dx = 8;                 // distanza foro pollice dal bordo frontale [mm]
 
+/* [Variante compatta (senza vano cavi)] */
+compatta = false;  // elimina vano cavi/piastra/portellino: coperchio lungo
+                   // quanto il vano tastiera e retro del tutto eliminato
+// Cerniera ricompattata (usata solo con compatta=true): orecchie spostate in
+// avanti e perni B bassi portano B1/B2 dentro il vano tastiera; le bielle a
+// gomito scivolano oltre i perni; l'apertura scende a 55 gradi (con 70 la
+// branca della cerniera resterebbe fuori dalla vasca: B2.x > fermata+5.5).
+lp1_u_c   = 8;     // perno coperchio P1 in variante compatta [mm]
+lp2_u_c   = 50;    // perno coperchio P2 in variante compatta [mm]
+zb1_c     = 10;    // quota perno B1 in variante compatta [mm]
+zb2_c     = 10;    // quota perno B2 in variante compatta [mm]
+ang_open_c = 55;   // angolo di apertura in variante compatta [gradi]
+bielle_gomito = true; // bielle a gomito (necessarie in variante compatta)
+gomito1_f = 0.4;   // posizione gomito biella1 (frazione B->P)
+gomito1_e = 6;     // curvatura gomito biella1 (locale +y = giu' a chiuso) [mm]
+gomito2_f = 0.5;   // posizione gomito biella2 (frazione B->P)
+gomito2_e = -6;    // curvatura gomito biella2 (locale -y = su a chiuso) [mm]
+
 /* [Suddivisione per la stampa (incasto a pettine)] */
 splitta     = true;  // divide base e coperchio in due meta' stampabili separatamente
 seam_base_y = 0;     // quota Y della giunzione della base [mm]
@@ -165,6 +191,13 @@ perno_lung_P2 = ear_t + g + link_t + g + link_t; // orecchio + (aria biella1) + 
 prof_poch = t_lid - g;                        // profondita' tasca tenone
 h_fermo   = tablet_t + 3;                     // fermo = spessore tablet + 3 mm
 rp_foro   = (pin_d + 0.4)/2;                  // raggio fori perni (gioco 0.4)
+
+// Variante compatta: il coperchio e' lungo quanto il vano tastiera (D_kb).
+// La cerniera e' RICOMPATTATA (orecchie in avanti, perni B bassi, bielle a
+// gomito, apertura ang_open_c): B1/B2 ricadono dentro la vasca, il coperchio
+// si appoggia sul suo bordo posteriore e il retro si elimina del tutto.
+Lu_lid = compatta ? D_kb : Lu;                // lunghezza del coperchio [mm]
+Lu_base = compatta ? Lu_lid : Lu;            // profondita' totale della base [mm]
 
 // Giunzione a pettine: il corso della giunzione (lungo X per la base, lungo u
 // per il coperchio, entrambi lunghi Lu) e' diviso in 2*n_denti celle
@@ -263,15 +296,18 @@ function ang_v(v) = v[0] == 0 ? (v[1] > 0 ? 90 : v[1] < 0 ? -90 : 0) :
                     v[0] > 0 ? atan(v[1]/v[0]) :
                     (v[1] >= 0 ? atan(v[1]/v[0]) + 180 : atan(v[1]/v[0]) - 180);
 
-lp1 = [lp1_u, -piv_v];                        // perno coperchio P1 (locale)
-lp2 = [lp2_u, -piv_v];                        // perno coperchio P2 (locale)
+lp1 = [compatta ? lp1_u_c : lp1_u, -piv_v];    // perno coperchio P1 (locale)
+lp2 = [compatta ? lp2_u_c : lp2_u, -piv_v];    // perno coperchio P2 (locale)
 
 Oc = [0, Ztop];                               // origine coperchio, chiuso
-Oo = [D_kb + open_dx, Ztop];                  // origine coperchio, aperto
+// aperto: in variante compatta il coperchio si appoggia sullo spigolo
+// superiore della parete posteriore della vasca (stessa cinematica)
+Oo = [compatta ? D_kb - wall_f/2 : D_kb + open_dx, Ztop];
+ang_eff = compatta ? ang_open_c : ang_open;   // angolo di apertura effettivo
 
 Pc1 = Oc + lp1;  Pc2 = Oc + lp2;              // perni coperchio, chiuso
-Po1 = Oo + rot2(ang_open, lp1);               // perni coperchio, aperto
-Po2 = Oo + rot2(ang_open, lp2);
+Po1 = Oo + rot2(ang_eff, lp1);                // perni coperchio, aperto
+Po2 = Oo + rot2(ang_eff, lp2);
 
 // perno fisso: sull'asse del segmento (posa chiusa <-> aperta), con z = zb
 function bialetta(Pc, Po, zb) =
@@ -279,8 +315,10 @@ function bialetta(Pc, Po, zb) =
         n = [-d[1], d[0]]/L, s = (zb - m[1])/n[1])
     m + s*n;
 
-B1 = bialetta(Pc1, Po1, zb1);
-B2 = bialetta(Pc2, Po2, zb2);
+zb1_eff = compatta ? zb1_c : zb1;             // quota perno B1 effettiva
+zb2_eff = compatta ? zb2_c : zb2;             // quota perno B2 effettiva
+B1 = bialetta(Pc1, Po1, zb1_eff);
+B2 = bialetta(Pc2, Po2, zb2_eff);
 
 L1  = norm(Pc1 - B1);                         // lunghezza biella1
 L2  = norm(Pc2 - B2);                         // lunghezza biella2
@@ -329,15 +367,29 @@ function d_ps(p, a, b) =
 function d_cop(p, t) =
     let(O = O_coperchio(t),
         u = [cos(ang_coperchio(t)), sin(ang_coperchio(t))])
-    d_ps(p, O, O + u*Lu);
+    d_ps(p, O, O + u*Lu_lid);
+
+// gomiti delle bielle (riferimento mondo, alla posa t)
+function E1_posa(t) = B1 + rot2(posa_biella1(t), [gomito1_f*L1, gomito1_e]);
+function E2_posa(t) = B2 + rot2(ang_biella2(t),  [gomito2_f*L2, gomito2_e]);
+
+// distanza perno-corpo biella1 (dritta, o a gomito = unione dei due fusi):
+// il corpo a gomito e' l'unione B->gomito e gomito->P, perni alle estremita'
+function d_biella1(p, t) =
+    compatta && bielle_gomito ?
+        min(d_ps(p, B1, E1_posa(t)), d_ps(p, E1_posa(t), P1_posa(t)),
+            norm(p - B1), norm(p - E1_posa(t)), norm(p - P1_posa(t))) - link_w/2
+        : d_ps(p, B1, P1_posa(t));
 
 campioni = [for (i = [0:20]) i/20];
-min_P2L1  = min([for (t = campioni) d_ps(P2_posa(t), B1, P1_posa(t))]);
+min_P2L1  = min([for (t = campioni) d_biella1(P2_posa(t), t)]);
 min_B1L2  = min([for (t = campioni) d_ps(B1, B2, P2_posa(t))]);
 min_P1L2  = min([for (t = campioni) d_ps(P1_posa(t), B2, P2_posa(t))]);
 min_B1cop = min([for (t = campioni) d_cop(B1, t)]);
 min_B2cop = min([for (t = campioni) d_cop(B2, t)]);
-min_B2L1  = min([for (t = campioni) d_ps(B2, B1, P1_posa(t))]);
+min_B2L1  = min([for (t = campioni) d_biella1(B2, t)]);
+assert(min_P2L1 >= soglia_pin && min_B2L1 >= soglia_pin,
+       "perno dentro il corpo della biella1: in variante compatta serve bielle_gomito = true (o un gomito piu' spinto)");
 // soglia percorsa per i contatti perno-corpo biella: metta larghezza biella +
 // raggio perno (a scala reale fa ~7.7, la specifica chiedeva 8)
 soglia_pin = link_w/2 + rp_foro;
@@ -348,6 +400,16 @@ echo(str("VERIFICHE (min su 21 pose):  P2-biella1 = ", min_P2L1, " (>=", soglia_
 echo(str("PERNI (2 copie ciascuno; diam. ", perno_stamp_d, " se stampati):  P1 = ",
          perno_lung_P1, "  B1 = ", perno_lung_B1, "  P2 = ", perno_lung_P2,
          "  B2 = ", perno_lung_B2));
+if (compatta)
+    echo(str("VARIANTE COMPATTA: coperchio e base lunghi ", Lu_lid,
+             " mm (van tastiera); senza vano cavi/piastra/portellino/bracci. ",
+             "Cerniera ricompattata: orecchie a u ", lp1[0], "/", lp2[0],
+             ", perni B a z ", zb1_c, "/", zb2_c, " (B1 = ", B1, ", B2 = ", B2,
+             "), apertura ", ang_open_c, " gradi e bielle a gomito ",
+             "(f=", gomito1_f, ", e=", gomito1_e, " / f=", gomito2_f,
+             ", e=", gomito2_e, "). Il cavo esce dalla fessura nella parete ",
+             "posteriore. Attenzione: un tablet di ", tablet_h,
+             " mm sporge oltre il bordo del coperchio."));
 
 // ---------------------------- MODULI BASE ----------------------------------
 // Estrusione lungo Y di un profilo 2D (x = u, y = v): occupa Y in [-h, 0],
@@ -357,36 +419,48 @@ module estrusa_y(h) rotate([90, 0, 0]) linear_extrude(height = h) children();
 // ------------------------------- 1. BASE -----------------------------------
 module base() {
     difference() {
-        translate([0, -Wt/2, 0]) cube([Lu, Wt, Ztop]);
+        translate([0, -Wt/2, 0]) cube([Lu_base, Wt, Ztop]);
         // vano tastiera (aperto in alto)
         translate([wall_f, -Wi/2, floor_t])
             cube([D_kb - 2*wall_f, Wi, Ztop]);
-        // vano posteriore cavi (chiuso sopra dalla piastra rear_top)
-        translate([D_kb, -Wi/2, floor_t])
-            cube([Lu - D_kb - wall_f, Wi, Ztop - rear_top - floor_t]);
-        // passaggio cavi nel tramezzo
-        translate([D_kb - wall_f - tol, -pass_w/2, floor_t])
-            cube([wall_f + 2*tol, pass_w, pass_h]);
+        if (compatta) {
+            // VARIANTE COMPATTA: la base FINISCE qui (Lu_base = Lu_lid = D_kb).
+            // La parete posteriore (ex tramezzo) fa da finecorsa: il coperchio
+            // aperto vi si appoggia sullo spigolo superiore (x = D_kb - wall_f/2,
+            // l'origine della posa aperta); il cavo esce dal retro con la fessura.
+            // Niente vano, piastra, portellino o bracci: i perni B1/B2 stanno
+            // dentro le pareti laterali grazie alla cerniera ricompattata.
+            translate([D_kb - wall_f - tol, -pass_w/2, floor_t])
+                cube([wall_f + 2*tol, pass_w, pass_h]);
+        } else {
+            // vano posteriore cavi (chiuso sopra dalla piastra rear_top)
+            translate([D_kb, -Wi/2, floor_t])
+                cube([Lu - D_kb - wall_f, Wi, Ztop - rear_top - floor_t]);
+            // passaggio cavi nel tramezzo
+            translate([D_kb - wall_f - tol, -pass_w/2, floor_t])
+                cube([wall_f + 2*tol, pass_w, pass_h]);
+            // portellino del vano posteriore: seduta a spoglio profonda porta_t
+            // (il portellino resta a filo del piano) + luce con bordo di appoggio
+            if (porta_aperta) {
+                translate([porta_x - porta_l/2, -porta_w/2, Ztop - porta_t])
+                    cube([porta_l, porta_w, porta_t + 1]);        // seduta
+                translate([porta_x - porta_l/2 + porta_lip,
+                           -porta_w/2 + porta_lip, Ztop - rear_top - 1])
+                    cube([porta_l - 2*porta_lip, porta_w - 2*porta_lip,
+                          rear_top + 2]);                         // luce + bordo
+            }
+        }
         // fori ciechi dei perni B1/B2: dalla faccia ESTERNA delle pareti
         for (sx = [-1, 1], B = [B1, B2])
             translate([B[0], sx*Yw1, B[1]])
                 rotate([sx < 0 ? -90 : 90, 0, 0])
                     cylinder(h = foro_prof, d = pin_d + 0.1);
-        // alloggi magneti sul bordo superiore delle pareti laterali
+        // alloggi magneti sul bordo superiore delle pareti laterali (sotto
+        // l'area coperta dal coperchio chiuso: frazioni di Lu_lid)
         if (usa_magneti)
             for (sx = [-1, 1], f = [mag_p1, mag_p2])
-                translate([f*Lu, sx*(Yw0 + wall_s/2), Ztop - mag_h])
+                translate([f*Lu_lid, sx*(Yw0 + wall_s/2), Ztop - mag_h])
                     cylinder(h = mag_h + 2, d = mag_d);
-        // portellino del vano posteriore: seduta a spoglio profonda porta_t
-        // (il portellino resta a filo del piano) + luce con bordo di appoggio
-        if (porta_aperta) {
-            translate([porta_x - porta_l/2, -porta_w/2, Ztop - porta_t])
-                cube([porta_l, porta_w, porta_t + 1]);        // seduta
-            translate([porta_x - porta_l/2 + porta_lip,
-                       -porta_w/2 + porta_lip, Ztop - rear_top - 1])
-                cube([porta_l - 2*porta_lip, porta_w - 2*porta_lip,
-                      rear_top + 2]);                         // luce + bordo
-        }
     }
 }
 
@@ -422,7 +496,7 @@ module coperchio_solido() {
             // piastra + fermo inferiore del tablet (su tutta la larghezza)
             translate([0, Wl/2, 0]) estrusa_y(Wl)
                 union() {
-                    square([Lu, t_lid]);
+                    square([Lu_lid, t_lid]);
                     translate([0, t_lid]) square([lip_t, h_fermo]);
                 }
             // guide laterali del tablet, a ridosso del fermo
@@ -599,6 +673,28 @@ module biella(L) {
     }
 }
 
+// Biella a GOMITO (variante compatta): unione NON convessa di due fusi
+// B->gomito e gomito->P. A differenza dell'inviluppo convesso, la zona retta
+// fra B e P resta vuota: il corpo scivola oltre i perni P2/B1 dell'altra
+// biella (gomito1: verso il basso a cerniera chiusa; gomito2: verso l'alto).
+// e > 0 piega il gomito verso +y locale (= in basso nella posa chiusa).
+module biella_gomito(L, f, e) {
+    difference() {
+        union() {
+            hull() {
+                circle(d = link_w);
+                translate([f*L, e]) circle(d = link_w);
+            }
+            hull() {
+                translate([f*L, e]) circle(d = link_w);
+                translate([L, 0]) circle(d = link_w);
+            }
+        }
+        circle(d = pin_d + 0.4);
+        translate([L, 0]) circle(d = pin_d + 0.4);
+    }
+}
+
 function ang_biella2(t) = ang_v(P2_posa(t) - B2);
 
 // biella in posa: ruota attorno al perno fisso B_i (angolo dalla sintesi)
@@ -608,7 +704,12 @@ module biella_in_posa(tipo, t, sy, off_y = 0) {
     L   = tipo == 1 ? L1 : L2;
     y1  = tipo == 1 ? (sy > 0 ? Yl11 : -Yl10) : (sy > 0 ? Yl21 : -Yl20);
     color("OrangeRed") translate([B[0], y1 + sy*off_y, B[1]])
-        rotate([0, -ang, 0]) estrusa_y(link_t) biella(L);
+        rotate([0, -ang, 0]) estrusa_y(link_t)
+            if (compatta && bielle_gomito)
+                biella_gomito(L, tipo == 1 ? gomito1_f : gomito2_f,
+                                 tipo == 1 ? gomito1_e : gomito2_e);
+            else
+                biella(L);
 }
 
 // -------------------------------- 5. PERNI ---------------------------------
@@ -669,7 +770,7 @@ module corpo_tastiera() {
 // --------------------------- MODALITA' DI VISTA ----------------------------
 module assieme() {
     color("SteelBlue") base();
-    if (porta_aperta) portellino_in_posa();
+    if (porta_aperta && !compatta) portellino_in_posa();
     coperchio_in_posa(1);
     for (sy = [-1, 1]) orecchio_in_posa(1, sy);
     for (sy = [-1, 1]) biella_in_posa(1, 1, sy);
@@ -679,12 +780,13 @@ module assieme() {
 
 // layout del piano di stampa
 ps_gap         = 25;
-ps_x_coperchio = Lu + ps_gap;
-ps_x_orecchio  = ps_x_coperchio + Lu + ps_gap;
+ps_x_coperchio = Lu_base + ps_gap;
+ps_x_orecchio  = ps_x_coperchio + Lu_lid + ps_gap;
 ps_x_biella1   = ps_x_orecchio + (lp2_u - lp1_u + 2*ear_r) + ps_gap;
 ps_x_biella2   = ps_x_biella1 + L1 + ps_gap;
 ps_x_porta     = ps_x_biella2 + L2 + ps_gap;
-ps_x_perni     = ps_x_porta + (porta_aperta ? porta_l + ps_gap : 0);
+ps_x_perni     = ps_x_porta +
+                 (porta_aperta && !compatta ? porta_l + ps_gap : 0);
 
 // le quattro meta' in assetto di stampa (usate anche come viste/STL singole)
 module coperchio_a() translate([ps_x_coperchio, -(Wl/2 + ps_gap), 0])
@@ -712,7 +814,7 @@ module vista_incastro() {
     translate([0, (Wt/2 + espl), 0]) color("CornflowerBlue") meta_base_B();
     translate([ps_x_coperchio, -(Wl/2 + espl), 0]) color("Peru") meta_coperchio_A();
     translate([ps_x_coperchio, (Wl/2 + espl), 0]) color("Chocolate") meta_coperchio_B();
-    if (porta_aperta) {
+    if (porta_aperta && !compatta) {
         if (splitta_porta) {
             translate([ps_x_porta, -espl - seam_porta_y, 0]) color("SteelBlue") meta_porta_A();
             translate([ps_x_porta, espl - seam_porta_y, 0]) color("CornflowerBlue") meta_porta_B();
@@ -732,18 +834,24 @@ module portellino_stampa() {
 }
 module orecchio_stampa(sy)
     color("Goldenrod")
-        translate([ps_x_orecchio - (lp1_u - ear_r), sy*(ear_t/2 + 10),
+        translate([ps_x_orecchio - (lp1[0] - ear_r), sy*(ear_t/2 + 10),
                    piv_v + ear_r])
             orecchio_solido();
 module biella_stampa(tipo, sy)
     color("OrangeRed")
         translate([tipo == 1 ? ps_x_biella1 : ps_x_biella2,
                    sy*(link_t/2 + 10), link_w/2])
-            estrusa_y(link_t) biella(tipo == 1 ? L1 : L2);
+            estrusa_y(link_t)
+                if (compatta && bielle_gomito)
+                    biella_gomito(tipo == 1 ? L1 : L2,
+                                  tipo == 1 ? gomito1_f : gomito2_f,
+                                  tipo == 1 ? gomito1_e : gomito2_e);
+                else
+                    biella(tipo == 1 ? L1 : L2);
 
 module piano_stampa() {
     base_stampa();
-    if (porta_aperta) portellino_stampa();
+    if (porta_aperta && !compatta) portellino_stampa();
     if (stampa_perni) translate([ps_x_perni, 0, 0]) color("Silver") perni_stampa();
     coperchio_stampa();
     orecchio_stampa(1);
@@ -817,7 +925,7 @@ module scena_animata() {
     // fase 8: tablet fantasma che scorre lungo il coperchio fino al fermo
     if (s8 > 0)
         in_coperchio(1)
-            translate([lip_t + (Lu - lip_t)*(1 - s8), -tablet_w/2, t_lid])
+            translate([lip_t + (Lu_lid - lip_t)*(1 - s8), -tablet_w/2, t_lid])
                 color([0.55, 0.75, 1, 0.45])
                     cube([tablet_h, tablet_w, tablet_t]);
     // didascalia della fase corrente (3D + echo)
