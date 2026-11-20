@@ -5,6 +5,10 @@
 //  cavo per i cavi e gli accessori, chiuso da una piastra superiore (che fa
 //  anche da finecorsa dell'apertura) e apribile tramite un portellino a
 //  incasso con foro pollice.
+//  Base e coperchio (i pezzi piu' lunghi) si possono stampare in DUE META'
+//  con giunzione a INCASTO A PETTINE (parametro splitta): denti press-fit
+//  allineano le parti, si oppongono allo strappo e la colla completa il
+//  fissaggio. Vedere i moduli meta_incastro_A/B e la vista mostra="incasto".
 //  Il coperchio NON ruota su un perno fisso: e' vincolato da una cerniera a
 //  QUADRILATERO ARTICOLATO (four-bar linkage) presente su ENTRAMBI i lati,
 //  quindi retrocede e si inclina contemporaneamente. Aperto a 70 gradi forma
@@ -40,22 +44,12 @@
 $fn  = 32;
 
 /* [Visualizzazione] */
-mostra      = "assieme"; // ["assieme","stampa","base","coperchio","orecchio", "biella1","biella2","portellino"]
+mostra      = "assieme"; // ["assieme","stampa","base","base_a","base_b","coperchio","coperchio_a","coperchio_b","incasto","orecchio","biella1","biella2","portellino"]
 animazione  = "nessuna"; // ["nessuna","tutto","assembla","apri"]
 t_manuale   = 0;         // >0: forza l'istante dell'animazione (0..1)
 camera_auto = true;      // false: disattiva la camera impostata qui
 
-// Camera (usata se camera_auto = true; con animazioni in anteprima)
-vpr_cam = [62, 0, 215];
-vpt_cam = [100, 0, 70];
-vpd_cam = 1250;
-$vpr = camera_auto ? vpr_cam : [55, 0, 25];
-$vpt = camera_auto ? vpt_cam : [100, 0, 40];
-$vpd = camera_auto ? vpd_cam : 900;
-
 /* [Tastiera] */
-
-// Tastiera
 kb_w     = 320;   // larghezza tastiera lungo Y [mm]
 kb_d     = 124;   // profondita' lungo X [mm]
 kb_h     = 32;    // altezza totale, keycap inclusi [mm]
@@ -119,6 +113,14 @@ porta_foro_l  = 24;                // lunghezza foro pollice lungo Y [mm]
 porta_foro_d  = 10;                // larghezza foro pollice lungo X [mm]
 porta_foro_dx = 8;                 // distanza foro pollice dal bordo frontale [mm]
 
+/* [Suddivisione per la stampa (incasto a pettine)] */
+splitta     = true;  // divide base e coperchio in due meta' stampabili separatamente
+seam_base_y = 0;     // quota Y della giunzione della base [mm]
+seam_cop_y  = 0;     // quota Y della giunzione del coperchio, rif. locale [mm]
+n_denti     = 6;     // numero di denti per giunzione (alternati ai vuoti)
+dent_d      = 10;    // profondita' del dente attraverso la giunzione [mm]
+inc_gioco   = 0.25;  // gioco laterale e di fondo dente/predella [mm]
+
 // ---------------------- GRANDEZZE DERIVATE --------------------------------
 D_kb = kb_d + 2*wall_f;                       // profondita' vano tastiera
 Ztop = floor_t + kb_h + top_gap;              // quota del bordo della vasca
@@ -126,6 +128,19 @@ Lu   = max(tablet_h + 20, D_kb + 40, D_kb + vano_d + wall_f); // lunghezza coper
 Wi   = kb_w + 2*tol;                          // larghezza interna
 Wt   = Wi + 2*wall_s;                         // larghezza totale base
 Wl   = Wt + 2*(g + ear_t);                    // larghezza totale coperchio
+
+// Camera (usata se camera_auto = true; con animazioni in anteprima).
+// Per le viste di layout (stampa, incasto, pezzi in assetto di stampa) la
+// camera si allarga per inquadrare l'intero piano: il centro e' stimato a
+// 2*Lu (tetto della lunghezza del piano di stampa) e la distanza copre
+// l'ingombro di ~850 x 800 mm del layout completo.
+/* [Camera] */
+vpr_cam = [62, 0, 215];
+vpt_cam = [100, 0, 70];
+vpd_cam = 1250;
+vpr_lay = [62, 0, 215];
+vpt_lay = [2*Lu, 0, 0];
+vpd_lay = 2800;
 
 // Livelli lungo Y (lato +Y; lato -Y e' speculare)
 Yw0  = Wi/2;            // faccia interna parete
@@ -147,6 +162,11 @@ prof_poch = t_lid - g;                        // profondita' tasca tenone
 h_fermo   = tablet_t + 3;                     // fermo = spessore tablet + 3 mm
 rp_foro   = (pin_d + 0.4)/2;                  // raggio fori perni (gioco 0.4)
 
+// Giunzione a pettine: il corso della giunzione (lungo X per la base, lungo u
+// per il coperchio, entrambi lunghi Lu) e' diviso in 2*n_denti celle
+// alternate dente/vuoto; il dente e' la cella pari.
+dent_l = Lu/(2*n_denti);                      // lunghezza dente lungo la giunzione [mm]
+
 // Portellino del vano posteriore (a incasso, a filo della piastra)
 
 porta_w       = Wi - 2*porta_cornice; // larghezza portellino lungo Y [mm]
@@ -161,6 +181,7 @@ porta_x = D_kb + open_dx + (Lu - wall_f - D_kb - open_dx)/2; // centro portellin
 // ottiene il sedile per testa conica (es. M3: vit_d=3, vit_svaso=1.6).
 // Nota: sopra il tenone la piastra resta sottile (t_lid - prof_poch), quindi
 // consigliate testa cilindrica + rondella, non testa svasata profonda.
+/* [Usa viti orecchio] */
 usa_viti_orecchio = true;  // abilita i fori passanti coperchio-orecchio
 vit_d     = 3;             // diametro nominale vite/perno [mm]
 vit_gioco = 0.2;           // gioco del foro [mm]
@@ -193,6 +214,24 @@ assert(!usa_viti_orecchio || (vit_u1 > lp1_u && vit_u2 < lp2_u),
        "fori di fissaggio fuori dal tenone");
 assert(vit_svaso == 0 || vit_svaso < t_lid,
        "svaso piu' profondo dello spessore del coperchio");
+assert(!splitta || n_denti >= 1, "n_denti deve essere almeno 1");
+assert(!splitta || (dent_d > 0 && dent_d < min(Wt, Wl)/2 - 1),
+       "dent_d troppo profondo rispetto alla larghezza dei pezzi");
+assert(!splitta || abs(seam_base_y) < Wt/2 - 1,
+       "giunzione base fuori dal pezzo");
+assert(!splitta || abs(seam_cop_y) < Wl/2 - 1,
+       "giunzione coperchio fuori dal pezzo");
+assert(!splitta || (inc_gioco > 0 && inc_gioco <= 0.6),
+       "inc_gioco deve essere > 0 e contenuto (max 0.6)");
+
+vista_layout = mostra == "stampa" || mostra == "incasto" ||
+               mostra == "base"    || mostra == "coperchio" ||
+               mostra == "base_a"  || mostra == "base_b"    ||
+               mostra == "coperchio_a" || mostra == "coperchio_b";
+
+$vpr = camera_auto ? (vista_layout ? vpr_lay : vpr_cam) : [55, 0, 25];
+$vpt = camera_auto ? (vista_layout ? vpt_lay : vpt_cam) : [100, 0, 40];
+$vpd = camera_auto ? (vista_layout ? vpd_lay : vpd_cam) : 900;
 
 // ------------------ CINEMATICA 2D NEL PIANO (x, z) -------------------------
 // Il coperchio vive in un riferimento locale (u, v): u lungo il coperchio a
@@ -400,6 +439,52 @@ module in_coperchio(t)
 
 module coperchio_in_posa(t) in_coperchio(t) color("Peru") coperchio_solido();
 
+// ------------------- SUDDIVISIONE IN META' PER LA STAMPA -------------------
+// La giunzione e' un INCASTO A PETTINE sul piano y = y0: la meta' A
+// (y < y0) porta i DENTI che si incastrano nelle PREDELLE della meta' B
+// (y > y0), maggiorate di inc_gioco. Le meta' si uniscono scorrendo lungo
+// +Y: il pettine allinea le parti e si oppone a strappo e taglio, la colla
+// completa il fissaggio. I denti attraversano tutto lo spessore del pezzo
+// (piastra + fermo per il coperchio; fondo e pareti per la base) e le zone
+// critiche (tasche orecchie, fori viti, portellino) sono lontane dalla
+// giunzione. Le meta' incollate riproducono il pezzo intero: assieme e
+// animazione usano la geometria intera, il piano di stampa le meta'.
+
+module meta_incastro_A(y0, L, d_d, gioco) {
+    seg = L/(2*n_denti);                       // celle alternate dente/vuoto
+    intersection() {
+        union() {
+            // meta' A: tutto il solido con y < y0
+            translate([0, y0 - 1000, -1]) cube([L, 1000, 1000]);
+            // denti a pettine: partono da dentro la meta' A e sporgono oltre
+            for (i = [0:n_denti-1])
+                translate([2*i*seg, y0 - 0.5, -1])
+                    cube([seg, 0.5 + d_d, 1000]);
+        }
+        children(0);
+    }
+}
+
+module meta_incastro_B(y0, L, d_d, gioco) {
+    seg = L/(2*n_denti);
+    difference() {
+        intersection() {
+            // meta' B: tutto il solido con y >= y0
+            translate([0, y0, -1]) cube([L, 1000, 1000]);
+            children(0);
+        }
+        // predelle: cavita' dei denti, maggiorate del gioco (lato e fondo)
+        for (i = [0:n_denti-1])
+            translate([2*i*seg - gioco, y0, -1])
+                cube([seg + 2*gioco, d_d + gioco, 1000]);
+    }
+}
+
+module meta_base_A() meta_incastro_A(seam_base_y, Lu, dent_d, inc_gioco) base();
+module meta_base_B() meta_incastro_B(seam_base_y, Lu, dent_d, inc_gioco) base();
+module meta_coperchio_A() meta_incastro_A(seam_cop_y, Lu, dent_d, inc_gioco) coperchio_solido();
+module meta_coperchio_B() meta_incastro_B(seam_cop_y, Lu, dent_d, inc_gioco) coperchio_solido();
+
 // ------------------------------ 3. ORECCHIO --------------------------------
 // Profilo 2D nel riferimento del coperchio: inviluppo convesso di due cerchi
 // centrati sui perni P1/P2, piu' il tenone che entra nella tasca della piastra.
@@ -581,8 +666,33 @@ ps_x_biella2   = ps_x_biella1 + L1 + ps_gap;
 ps_x_porta     = ps_x_biella2 + L2 + ps_gap;
 ps_x_perni     = ps_x_porta + (porta_aperta ? porta_l + ps_gap : 0);
 
-module coperchio_stampa() translate([ps_x_coperchio, 0, 0])
-    color("Peru") coperchio_solido();          // faccia posteriore sul letto
+// le quattro meta' in assetto di stampa (usate anche come viste/STL singole)
+module coperchio_a() translate([ps_x_coperchio, -(Wl/2 + ps_gap), 0])
+    color("Peru") meta_coperchio_A();
+module coperchio_b() translate([ps_x_coperchio, (Wl/2 + ps_gap), 0])
+    color("Chocolate") meta_coperchio_B();
+module base_a() translate([0, -(Wt/2 + ps_gap), 0]) color("SteelBlue") meta_base_A();
+module base_b() translate([0, (Wt/2 + ps_gap), 0]) color("CornflowerBlue") meta_base_B();
+
+module coperchio_stampa() {
+    if (splitta) { coperchio_a(); coperchio_b(); }
+    else translate([ps_x_coperchio, 0, 0])
+        color("Peru") coperchio_solido();      // faccia posteriore sul letto
+}
+module base_stampa() {
+    if (splitta) { base_a(); base_b(); }
+    else color("SteelBlue") base();
+}
+
+// vista di controllo della giunzione: base e coperchio in due meta',
+// allontanate per ispezionare denti e predelle
+module vista_incastro() {
+    espl = 2*ps_gap;                           // allontanamento per l'ispezione
+    translate([0, -(Wt/2 + espl), 0]) color("SteelBlue") meta_base_A();
+    translate([0, (Wt/2 + espl), 0]) color("CornflowerBlue") meta_base_B();
+    translate([ps_x_coperchio, -(Wl/2 + espl), 0]) color("Peru") meta_coperchio_A();
+    translate([ps_x_coperchio, (Wl/2 + espl), 0]) color("Chocolate") meta_coperchio_B();
+}
 module portellino_stampa() color("SteelBlue")
     translate([ps_x_porta, -(porta_w - 2*porta_gioco)/2, 0]) portellino();
 module orecchio_stampa(sy)
@@ -597,7 +707,7 @@ module biella_stampa(tipo, sy)
             estrusa_y(link_t) biella(tipo == 1 ? L1 : L2);
 
 module piano_stampa() {
-    color("SteelBlue") base();
+    base_stampa();
     if (porta_aperta) portellino_stampa();
     if (stampa_perni) translate([ps_x_perni, 0, 0]) color("Silver") perni_stampa();
     coperchio_stampa();
@@ -684,8 +794,13 @@ module scena_animata() {
 if (animazione == "nessuna") {
     if      (mostra == "assieme")   assieme();
     else if (mostra == "stampa")    piano_stampa();
-    else if (mostra == "base")      color("SteelBlue") base();
+    else if (mostra == "base")      base_stampa();
+    else if (mostra == "base_a")    base_a();
+    else if (mostra == "base_b")    base_b();
     else if (mostra == "coperchio") coperchio_stampa();
+    else if (mostra == "coperchio_a") coperchio_a();
+    else if (mostra == "coperchio_b") coperchio_b();
+    else if (mostra == "incasto")   vista_incastro();
     else if (mostra == "orecchio")  { orecchio_stampa(1); orecchio_stampa(-1); }
     else if (mostra == "biella1")   { biella_stampa(1, 1); biella_stampa(1, -1); }
     else if (mostra == "biella2")   { biella_stampa(2, 1); biella_stampa(2, -1); }
