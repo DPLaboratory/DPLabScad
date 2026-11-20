@@ -104,6 +104,8 @@ mag_p2   = 0.75;  // posizione 2 lungo Lu (frazione) [-]
 
 /* [Dettagli di stampa/montaggio] */
 foro_prof = 4;    // profondita' fori ciechi dei perni B (dalla faccia esterna) [mm]
+foro_B_passante = true; // fori dei perni B1/B2 PASSANTI attraverso le pareti:
+                        // il perno si spinge da fuori ed esce dentro il case
 pass_w    = 20;   // larghezza passaggio cavi nel tramezzo [mm]
 pass_h    = 10;   // altezza passaggio cavi [mm]
 stampa_perni  = false;        // perni stampati nel piano di stampa (per la prova mini)
@@ -182,9 +184,10 @@ Yl11 = Yl10 + link_t;   // faccia esterna biella1
 Yl20 = Yl11 + g;        // faccia interna biella2
 Yl21 = Yl20 + link_t;   // faccia esterna biella2
 
-// lunghezze dei perni di montaggio (valgono anche per quelli stampati)
-perno_lung_B1 = Yl11 - Yw1 + foro_prof;         // parete + zona orecchio + biella1
-perno_lung_B2 = Yl21 - Yw1 + foro_prof;         // parete + zona orecchio + biella2
+// lunghezze dei perni di montaggio (valgono anche per quelli stampati):
+// col foro passante il perno arriva fino alla faccia interna della parete
+perno_lung_B1 = Yl11 - Yw1 + (foro_B_passante ? wall_s : foro_prof); // parete + zona orecchio + biella1
+perno_lung_B2 = Yl21 - Yw1 + (foro_B_passante ? wall_s : foro_prof); // parete + zona orecchio + biella2
 perno_lung_P1 = ear_t + g + link_t;             // orecchio + biella1
 perno_lung_P2 = ear_t + g + link_t + g + link_t; // orecchio + (aria biella1) + biella2
 
@@ -450,11 +453,14 @@ module base() {
                           rear_top + 2]);                         // luce + bordo
             }
         }
-        // fori ciechi dei perni B1/B2: dalla faccia ESTERNA delle pareti
+        // fori dei perni B1/B2: PASSANTI attraverso la parete (foro_B_passante)
+        // o ciechi dalla faccia ESTERNA; il perno si spinge da fuori verso
+        // l'interno e con il foro passante puo' sporgere anche dentro il case
         for (sx = [-1, 1], B = [B1, B2])
             translate([B[0], sx*Yw1, B[1]])
                 rotate([sx < 0 ? -90 : 90, 0, 0])
-                    cylinder(h = foro_prof, d = pin_d + 0.1);
+                    cylinder(h = foro_B_passante ? wall_s + 2 : foro_prof,
+                             d = pin_d + 0.1);
         // alloggi magneti sul bordo superiore delle pareti laterali (sotto
         // l'area coperta dal coperchio chiuso: frazioni di Lu_lid)
         if (usa_magneti)
@@ -722,7 +728,8 @@ module perno_sxy(px, pz, sy, ya, yb, off = 0) color("Silver") {
 }
 
 module perni_in_posa(t, off = 0) {
-    yt = Yw1 - foro_prof;                       // fondo del foro cieco
+    // punta del perno: fondo del foro cieco o faccia interna (foro passante)
+    yt = foro_B_passante ? Yw0 : Yw1 - foro_prof;
     for (sy = [-1, 1]) {
         P1v = P1_posa(t); P2v = P2_posa(t);
         // B1: parete + orecchio (zona libera) + biella1

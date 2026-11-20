@@ -45,7 +45,7 @@ i perni P1/P2 collegano orecchio e biella.
 
 1. **base** – vasca con vano tastiera frontale, vano posteriore per cavi e
    accessori (**apribile con portellino a incasso**), passaggio cavi nel
-   tramezzo, fori ciechi per i perni, alloggi magneti opzionali.
+   tramezzo, fori passanti per i perni delle bielle (`foro_B_passante`), alloggi magneti opzionali.
 2. **coperchio** – piastra con fermo e guide per il tablet, tasche per le
    orecchie. Si stampa a faccia posteriore sul letto.
 3. **2 orecchie** – incollate nel coperchio (profilo = inviluppo di due cerchi
@@ -396,8 +396,7 @@ vettore "su dello schermo" della camera gimbal (`R(vpr)·[0,1,0]`); se cambi
   con 6 perimetrature (i perni lavorano a compressione sui fori).
 - **Portellino**: si stampa piatto, lato grande sul letto, senza supporti.
 - **Supporti**: non necessari in nessun pezzo (tutti i fori orizzontali sono
-  passanti o ciechi dal lato esterno; anche le facce di giunzione sono
-  verticali).
+  passanti; anche le facce di giunzione sono verticali).
 - **Montaggio**:
   1. se `splitta`: **incasta e incolla le metà** (vedi §6.1) e lascia
      polymerizzare prima di continuare,
