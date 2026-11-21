@@ -360,30 +360,21 @@ module estrusa_y(h) rotate([90, 0, 0]) linear_extrude(height = h) children();
 
 forex_c = [0.82, 0.84, 0.88, 0.65];           // colore "forex" (pannelli)
 
-// giunto di posizione dal piano locale y=0 (faccia dell'inserto contro la
-// parete): maschio press-fit VERSO la parete (-y) oppure foro per barra (+y)
-module giun_y(h_pezzo) {
-    if (f_cieco)
-        rotate([90, 0, 0]) cylinder(h = f_tab_l, d = f_pin);
-    else
-        rotate([-90, 0, 0]) cylinder(h = h_pezzo, d = f_foro);
-}
-// giunto lungo X dal piano locale x=0: il pannello sta in x > 0 del telao:
-// maschio verso il pannello (+x), foro attraverso il pezzo (-x)
-module giun_x(h_pezzo) {
-    if (f_cieco)
-        rotate([0, -90, 0]) cylinder(h = f_tab_l, d = f_pin);
-    else
-        rotate([0, 90, 0]) cylinder(h = h_pezzo, d = f_foro);
-}
-// giunto verticale dal piano locale z=0 (faccia dell'inserto sul pannello):
-// maschio nel pannello (-z), foro attraverso il pezzo (+z)
-module giun_z(h_pezzo) {
-    if (f_cieco)
-        rotate([180, 0, 0]) cylinder(h = f_tab_l, d = f_pin);
-    else
-        cylinder(h = h_pezzo, d = f_foro);
-}
+// giunti di posizione dal piano locale della faccia contro la parete/pannello.
+// Convenzione telai: y=0/x=0/z=0 = faccia dell'inserto contro il pannello;
+// il pezzo esce VERSO L'ESTERNO (+y per i pezzi a normale Y, -x per quelli a
+// normale X, +z per quelli appoggiati) e il pannello sta dall'altro lato.
+//   maschio_*: press-fit VERSO il pannello (si uniscono al pezzo)
+//   foro_*:    passante ATTRAVERSO il pezzo (si sottraggono al pezzo)
+module maschio_y() translate([0, 1, 0]) rotate([90, 0, 0])
+    cylinder(h = f_tab_l + 1, d = f_pin);       // 1 mm dentro il pezzo: fusione sicura
+module foro_y(h)    rotate([-90, 0, 0]) cylinder(h = h, d = f_foro);
+module maschio_x() translate([-1, 0, 0]) rotate([0, 90, 0])
+    cylinder(h = f_tab_l + 1, d = f_pin);
+module foro_x(h)    rotate([0, -90, 0]) cylinder(h = h, d = f_foro);
+module maschio_z() translate([0, 0, 1]) rotate([180, 0, 0])
+    cylinder(h = f_tab_l + 1, d = f_pin);
+module foro_z(h)    cylinder(h = h, d = f_foro);
 
 // ---------------------- PANNELLI DI FOREX (SAGOMI) -------------------------
 // Sagomi 2D con i fori di posizione gia' tagliati: stampabili e usabili come
@@ -472,84 +463,120 @@ module sagomo_coperchio() {
 //    retro = false (spigolo frontale) / true (posteriore: ospita il foro B2).
 module angolo_pezzo(retro) {
     fr = retro ? frR : frA;
-    union() {
-        difference() {
-            union() {
-                // gamba laterale: x 0..leg_l, y 0..leg_t
-                cube([leg_l, leg_t, leg_h]);
-                // gamba frontale/posteriore: x -leg_t..0, y -leg_l..leg_t
-                translate([-leg_t, -leg_l, 0]) cube([leg_t, leg_l + leg_t, leg_h]);
-            }
-            if (retro)
-                // foro passante perno B2 (attraversa la gamba laterale)
-                translate([D_kb - B2[0], 0, zb2 - fx_t]) rotate([90, 0, 0])
-                    cylinder(h = 2*leg_t + 4, d = pin_d + 0.4, center = true);
+    difference() {
+        union() {
+            // gamba laterale: x 0..leg_l, y 0..leg_t
+            cube([leg_l, leg_t, leg_h]);
+            // gamba frontale/posteriore: x -leg_t..0, y -leg_l..leg_t
+            translate([-leg_t, -leg_l, 0]) cube([leg_t, leg_l + leg_t, leg_h]);
+            if (f_cieco)
+                for (i = [0, 1]) {
+                    translate([leg_l*fr[i], 0, i == 0 ? tab_z_hub1 : tab_z_hub2])
+                        maschio_y();
+                    translate([0, -(8 + 12*i), i == 0 ? tab_z_hub1 : tab_z_hub2])
+                        maschio_x();
+                }
         }
-        // maschi/fori di posizione: gamba laterale
-        for (i = [0, 1])
-            translate([leg_l*fr[i], 0, i == 0 ? tab_z_hub1 : tab_z_hub2])
-                giun_y(leg_t + 1);
-        // gamba frontale/posteriore
-        for (i = [0, 1])
-            translate([0, -(8 + 12*i), i == 0 ? tab_z_hub1 : tab_z_hub2])
-                giun_x(leg_t + 1);
+        if (retro)
+            // foro passante perno B2 (attraversa la gamba laterale)
+            translate([D_kb - B2[0], 0, zb2 - fx_t]) rotate([90, 0, 0])
+                cylinder(h = 2*leg_t + 4, d = pin_d + 0.4, center = true);
+        if (!f_cieco)
+            for (i = [0, 1]) {
+                translate([leg_l*fr[i], 0, i == 0 ? tab_z_hub1 : tab_z_hub2])
+                    foro_y(leg_t + 1);
+                translate([0, -(8 + 12*i), i == 0 ? tab_z_hub1 : tab_z_hub2])
+                    foro_x(leg_t + 1);
+            }
     }
 }
 
 // 2. BOSS PERNO B1 (parete laterale, all'esterno)
 module nervo_B1_pezzo() {
-    union() {
-        difference() {
+    difference() {
+        union() {
             cube([boss_w, boss_t, 14]);
-            // foro passante del perno B1
-            translate([boss_w/2, 0, 7]) rotate([90, 0, 0])
-                cylinder(h = 2*boss_t + 4, d = pin_d + 0.4, center = true);
+            if (f_cieco)
+                for (xx = [-5, 5])
+                    translate([boss_w/2 + xx, 0, 7]) maschio_y();
         }
-        for (xx = [-5, 5])
-            translate([boss_w/2 + xx, 0, 7]) giun_y(boss_t + 1);
+        // foro passante del perno B1
+        translate([boss_w/2, 0, 7]) rotate([90, 0, 0])
+            cylinder(h = 2*boss_t + 4, d = pin_d + 0.4, center = true);
+        if (!f_cieco)
+            for (xx = [-5, 5])
+                translate([boss_w/2 + xx, 0, 7]) foro_y(boss_t + 1);
     }
 }
 
 // 3. STAFFA A T (rinforzo bordo parete, all'esterno)
 module staffa_pezzo() {                       // pareti laterali
-    union() {
-        cube([t_len, cap_t, t_h]);
-        for (i = [0, 1])
-            translate([t_len/2 + (i == 0 ? -t_len*0.25 : t_len*0.25), 0,
-                       i == 0 ? tab_z_t1 : tab_z_t2])
-                giun_y(cap_t + 1);
+    difference() {
+        union() {
+            cube([t_len, cap_t, t_h]);
+            if (f_cieco)
+                for (i = [0, 1])
+                    translate([t_len/2 + (i == 0 ? -t_len*0.25 : t_len*0.25), 0,
+                               i == 0 ? tab_z_t1 : tab_z_t2])
+                        maschio_y();
+        }
+        if (!f_cieco)
+            for (i = [0, 1])
+                translate([t_len/2 + (i == 0 ? -t_len*0.25 : t_len*0.25), 0,
+                           i == 0 ? tab_z_t1 : tab_z_t2])
+                    foro_y(cap_t + 1);
     }
 }
 module staffa_fr_pezzo() {                    // pareti frontale/posteriore
-    union() {
-        translate([-cap_t, -t_len/2, 0]) cube([cap_t, t_len, t_h]);
-        for (i = [0, 1])
-            translate([0, t_len/2 + (i == 0 ? -t_len*0.25 : t_len*0.25),
-                       i == 0 ? tab_z_t1 : tab_z_t2])
-                giun_x(cap_t + 1);
+    difference() {
+        union() {
+            translate([-cap_t, -t_len/2, 0]) cube([cap_t, t_len, t_h]);
+            if (f_cieco)
+                for (i = [0, 1])
+                    translate([0, (i == 0 ? -t_len*0.25 : t_len*0.25),
+                               i == 0 ? tab_z_t1 : tab_z_t2])
+                        maschio_x();
+        }
+        if (!f_cieco)
+            for (i = [0, 1])
+                translate([0, (i == 0 ? -t_len*0.25 : t_len*0.25),
+                           i == 0 ? tab_z_t1 : tab_z_t2])
+                    foro_x(cap_t + 1);
     }
 }
 
 // 4. CAPPA (bordo superiore parete, all'esterno; il coperchio vi si appoggia)
 module cappa_lat_pezzo() {                    // pareti laterali
-    union() {
-        cube([cap_lat_len, cap_t, cap_h]);
-        for (fr = [0.25, 0.75])
-            translate([cap_lat_len*fr, 0, tab_z_cap]) giun_y(cap_t + 1);
+    difference() {
+        union() {
+            cube([cap_lat_len, cap_t, cap_h]);
+            if (f_cieco)
+                for (fr = [0.25, 0.75])
+                    translate([cap_lat_len*fr, 0, tab_z_cap]) maschio_y();
+        }
+        if (!f_cieco)
+            for (fr = [0.25, 0.75])
+                translate([cap_lat_len*fr, 0, tab_z_cap]) foro_y(cap_t + 1);
     }
 }
 module cappa_fr_pezzo(mag_ly = mag_y1 + Wi/2) {   // frontale/posteriore
     seg_w = Wi/cappe_n;
-    union() {
-        difference() {
-            translate([-cap_t, 0, 0]) cube([cap_t, seg_w, cap_h]);
-            // alloggio magnete (attraversa la cappa, si incolla a filo)
-            if (usa_magneti)
-                translate([-cap_t/2, mag_ly, cap_h - mag_h])
-                    cylinder(h = mag_h + 1, d = mag_d);
+    difference() {
+        union() {
+            difference() {
+                translate([-cap_t, 0, 0]) cube([cap_t, seg_w, cap_h]);
+                // alloggio magnete (attraversa la cappa, si incolla a filo)
+                if (usa_magneti)
+                    translate([-cap_t/2, mag_ly, cap_h - mag_h])
+                        cylinder(h = mag_h + 1, d = mag_d);
+            }
+            if (f_cieco)
+                for (fr = [0.25, 0.75])
+                    translate([0, seg_w*fr, tab_z_cap]) maschio_x();
         }
-        for (fr = [0.25, 0.75])
-            translate([0, seg_w*fr, tab_z_cap]) giun_x(cap_t + 1);
+        if (!f_cieco)
+            for (fr = [0.25, 0.75])
+                translate([0, seg_w*fr, tab_z_cap]) foro_x(cap_t + 1);
     }
 }
 
@@ -607,16 +634,16 @@ module zona_libera_2d(B, lp, L) {
 
 // orecchio solido 3D: profilo estruso lungo Y + giunti di posizione sul bordo
 module orecchio_pezzo() {
-    union() {
-        translate([0, ear_t, 0]) estrusa_y(ear_t) profilo_orecchio();
-        // giunti di posizione: attraversano il bordo del pannello (maschio
-        // orizzontale a meta' spessore, oppure foro per barra)
-        if (f_cieco)
+    difference() {
+        union() {
+            translate([0, ear_t, 0]) estrusa_y(ear_t) profilo_orecchio();
+            if (f_cieco)
+                for (uu = [vit_u1, vit_u2])
+                    translate([uu, 0, fx_t/2]) maschio_y();
+        }
+        if (!f_cieco)
             for (uu = [vit_u1, vit_u2])
-                translate([uu, 0, fx_t/2]) giun_y(f_tab_l);
-        else
-            for (uu = [vit_u1, vit_u2])
-                translate([uu, 0, fx_t/2]) giun_y(ear_t + 1);
+                translate([uu, 0, fx_t/2]) foro_y(ear_t + 1);
     }
 }
 
@@ -625,20 +652,32 @@ module orecchio_pezzo() {
 // il fermo esce in -x (fuori dal case) e sale fino a fx_t + h_fermo.
 module fermo_pezzo() {
     seg_fw = 2*pan_w/fermo_n;
-    union() {
-        translate([-fermo_t, 0, 0]) cube([fermo_t, seg_fw, fx_t + h_fermo]);
-        for (fr = fermo_tab)
-            translate([0, seg_fw*fr, fx_t/2]) giun_x(fermo_t + 1);
+    difference() {
+        union() {
+            translate([-fermo_t, 0, 0]) cube([fermo_t, seg_fw, fx_t + h_fermo]);
+            if (f_cieco)
+                for (fr = fermo_tab)
+                    translate([0, seg_fw*fr, fx_t/2]) maschio_x();
+        }
+        if (!f_cieco)
+            for (fr = fermo_tab)
+                translate([0, seg_fw*fr, fx_t/2]) foro_x(fermo_t + 1);
     }
 }
 
 // 7. GUIDA laterale del tablet (piatto sulla faccia tablet del pannello)
 // Telao: z=0 = faccia sul pannello; il maschio va nel pannello (-z).
 module guida_pezzo() {
-    union() {
-        cube([guide_l, guide_t, guide_t]);
-        for (fr = guide_tab)
-            translate([guide_l*fr, guide_t/2, 0]) giun_z(guide_t + 1);
+    difference() {
+        union() {
+            cube([guide_l, guide_t, guide_t]);
+            if (f_cieco)
+                for (fr = guide_tab)
+                    translate([guide_l*fr, guide_t/2, 0]) maschio_z();
+        }
+        if (!f_cieco)
+            for (fr = guide_tab)
+                translate([guide_l*fr, guide_t/2, 0]) foro_z(guide_t + 1);
     }
 }
 
@@ -828,7 +867,9 @@ module assieme() {
 // orecchio in assetto di stampa (profilo con il punto piu' basso sul letto)
 module orecchio_stampa_p() translate([0, 0, piv_v + ear_r]) orecchio_pezzo();
 
-// layout del piano di stampa
+// layout del piano di stampa: fasce separate con gioco >= 2 mm fra pezzi
+// (ingombri calcolati INCLUSE le sporgenze dei maschi di posizione) per
+// consentire la separazione in oggetti distinti nello slicer
 module biella_stampa(tipo, px, py) color("OrangeRed")
     translate([px, py, link_w/2]) estrusa_y(link_t)
         if (bielle_gomito)
@@ -839,48 +880,45 @@ module biella_stampa(tipo, px, py) color("OrangeRed")
             biella(tipo == 1 ? L1 : L2);
 
 module piano_stampa() {
-    // colonna sinistra: pezzi lunghi lungo Y (cappe fr + fermo)
-    for (k = [0:cappe_n-1]) {
-        translate([0,     0, 0]) cappa_fr_pezzo();
-        translate([4,     0, 0]) cappa_fr_pezzo();
-        translate([8, -0.01, 0]) cappa_fr_pezzo();
-        translate([12, -0.01, 0]) cappa_fr_pezzo();
+    // colonna lunga (x 0..34): cappe fr + fermo, lunghi in +y
+    //   piatti x [0,2] [5,7] [10,12] [15,17]; maschi +x senza toccare il vicino
+    for (k = [0:2*cappe_n-1]) {
+        translate([2 + k*5, 0, 0]) cappa_fr_pezzo();
     }
-    translate([18, 0, 0]) fermo_pezzo();
-    translate([24, 0, 0]) fermo_pezzo();
-    // angolari (2 frontali + 2 posteriori)
-    translate([34, 0, 0])  angolo_pezzo(false);
-    translate([34, 34, 0]) angolo_pezzo(false);
-    translate([68, 0, 0])  angolo_pezzo(true);
-    translate([68, 34, 0]) angolo_pezzo(true);
-    // boss B1 (2)
-    translate([102, 0, 0])  nervo_B1_pezzo();
-    translate([124, 0, 0])  nervo_B1_pezzo();
-    // staffe T laterali (6) e frontali/posteriori (4)
+    translate([26, 0, 0]) fermo_pezzo();   // piatto x [22,26], maschi [26,28]
+    translate([34, 0, 0]) fermo_pezzo();   // piatto x [30,34]
+    // riga A (y 6..64): angolari a L (ingombro locale x [-4,24], y [-24,4])
+    translate([42, 30, 0]) angolo_pezzo(false);   // x 38..66,  y  6..34
+    translate([42, 60, 0]) angolo_pezzo(false);   // x 38..66,  y 36..64
+    translate([80, 30, 0]) angolo_pezzo(true);    // x 76..104, y  6..34
+    translate([80, 60, 0]) angolo_pezzo(true);    // x 76..104, y 36..64
+    // boss B1 (x 108..148, y 2..8)
+    translate([108, 4, 0]) nervo_B1_pezzo();
+    translate([130, 4, 0]) nervo_B1_pezzo();
+    // staffe T laterali (2 per posizione)
     for (k = [0:len(ins_t_lat)-1]) {
-        translate([102 + k*22, 20, 0]) staffa_pezzo();
-        translate([102 + k*22, 36, 0]) staffa_pezzo();
+        translate([108 + k*24, 16, 0]) staffa_pezzo();   // y 16..18
+        translate([108 + k*24, 22, 0]) staffa_pezzo();   // y 22..24
     }
+    // staffe T frontali/posteriori (2 per posizione)
     for (k = [0:len(ins_t_fr)-1]) {
-        translate([146 + k*22, 20, 0]) staffa_fr_pezzo();
-        translate([146 + k*22, 36, 0]) staffa_fr_pezzo();
+        translate([158 + k*8, 16, 0]) staffa_fr_pezzo();  // x 156..158, y 6..26
+        translate([158 + k*8, 44, 0]) staffa_fr_pezzo();  // y 34..54
     }
-    // cappe laterali (2)
-    translate([34, 72, 0]) cappa_lat_pezzo();
-    translate([34, 80, 0]) cappa_lat_pezzo();
-    // orecchie (2)
-    translate([102, 72, 0])  orecchio_stampa_p();
-    translate([102, 98, 0])  orecchio_stampa_p();
-    // guide (2)
-    translate([102, 124, 0]) guida_pezzo();
-    translate([102, 132, 0]) guida_pezzo();
-    // bielle (4)
-    biella_stampa(1, 34, 104);
-    biella_stampa(1, 34, 122);
-    biella_stampa(2, 34, 140);
-    biella_stampa(2, 34, 158);
+    // riga B (y 72..106): cappe laterali, orecchie, guide
+    translate([42, 74, 0]) cappa_lat_pezzo();    // x 42..109, y 74..76
+    translate([42, 80, 0]) cappa_lat_pezzo();    // y 80..82
+    translate([114, 74, 0]) orecchio_stampa_p(); // x 115..171, y 74..78
+    translate([114, 82, 0]) orecchio_stampa_p(); // y 82..86
+    translate([114, 94, 0]) guida_pezzo();       // x 114..159, y 94..98
+    translate([114, 102, 0]) guida_pezzo();      // y 102..106
+    // riga C (y 112..148): bielle in colonna
+    biella_stampa(1, 44, 116);   // x 38..114, y 112..116
+    biella_stampa(1, 44, 126);   // y 122..126
+    biella_stampa(2, 44, 138);   // x 38..124, y 134..138
+    biella_stampa(2, 44, 148);   // y 144..148
     // perni della cerniera (opzione)
-    if (stampa_perni) translate([136, 156, 0]) color("Silver") perni_stampa();
+    if (stampa_perni) translate([44, 162, 0]) color("Silver") perni_stampa();
 }
 
 // vista dei sagomi forex (da ritagliare)
