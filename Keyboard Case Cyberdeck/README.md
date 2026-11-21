@@ -4,9 +4,16 @@ File sorgente: [`custodia_tastiera_stand.scad`](custodia_tastiera_stand.scad)
 OpenSCAD standard, nessuna libreria esterna. Commenti nel codice in italiano.
 
 > Questo file contiene **solo la variante compatta** (senza vano cavi, piastra
-> posteriore e portellino). La versione completa precedente è conservata, come
-> riferimento storico, in [`custodia_tastiera_stand-rev0.scad`](custodia_tastiera_stand-rev0.scad)
+> posteriore e portellino), interamente stampata. La versione completa
+> precedente è conservata, come riferimento storico, in
+> [`custodia_tastiera_stand-rev0.scad`](custodia_tastiera_stand-rev0.scad)
 > (**da non modificare**).
+>
+> Esiste anche una seconda realizzazione dello stesso progetto con le **facce
+> piane in pannelli di forex** e inserti stampati di raccordo:
+> [`custodia_tastiera_forex.scad`](custodia_tastiera_forex.scad), documentata
+> nella [§8](#8-versione-forex-custodia_tastiera_forexscad) con le relative
+> animazioni.
 
 ---
 
@@ -273,7 +280,8 @@ Nel progetto sono incluse tre GIF (cartella [`img/`](img/)) generate con la
 CLI di OpenSCAD a partire dalla **versione completa precedente** (base più
 lunga, con vano cavi): le fasi di montaggio e apertura restano
 rappresentative, ma per la versione compatta conviene **rigenerarle** con la
-procedura qui sotto.
+procedura qui sotto. Per la versione forex ci sono GIF dedicate nella
+[§8.4](#84-animazioni-della-versione-forex).
 
 | File | Contenuto | Frame |
 |---|---|---|
@@ -414,6 +422,149 @@ ANIMAZIONE ............... sstep, fase(i), didascalie, didascalia 3D,
                           scena_animata
 INVOCO ................... scelta per `mostra` / `animazione`
 ```
+
+---
+
+## 8. Versione forex (`custodia_tastiera_forex.scad`)
+
+Seconda realizzazione dello stesso progetto: tutte le **facce piane sono
+pannelli di forex** (PVC espanso) spessi 2 mm, tagliati a misura, mentre lo
+stampato si riduce a **inserti di raccordo**. La cerniera (quadrilatero
+articolato, apertura 55°, bielle a gomito), la cinematica e le orecchie sono
+identiche alla versione compatta: cambia solo il modo in cui si costruiscono
+base e coperchio.
+
+### 8.1 Pannelli (da ritagliare)
+
+Tutte le facce piane sono forex da `fx_t = 2` mm. Con i valori predefiniti
+(tastiera 320 × 124 × 32):
+
+| Pannello | Misure (mm) | Note |
+|---|---|---|
+| Fondo | 325,2 × 128 | le pareti vi si incollano sopra |
+| Pareti laterali (2) | 128 × 35 | fori per angolari, staffe, boss B1, cappe |
+| Parete frontale | 321,2 × 35 | fori per angolari, staffe, cappe |
+| Parete posteriore | 321,2 × 35 | come la frontale + **fessura cavi 20 × 10** da ritagliare al fondo |
+| Coperchio | 128 × 326,4 | fori guide + segni fori orecchie/fermo |
+
+Le misure si ricalcolano dai parametri: a ogni compilazione gli `echo`
+riportano le dimensioni aggiornate. Con i valori predefiniti la cerniera
+sintetizza `B1 = [76.53, 10]`, `B2 = [122.93, 10]` (L1 = 70.15, L2 = 74.45,
+d12 = 42) e le verifiche a runtime superano le soglie.
+
+**Vista `mostra = "pannelli"`**: i 5 sagomi già forati, affiancati e pronti da
+esportare (STL o SVG/DXF via `projection()`), stampabili e utilizzabili come
+**maschere di trapanatura** sul forex. I fori a bordo (orecchie e fermo) sono
+solo **segni di posizione**: nel reale il foro si fa nel bordo del pannello,
+in orizzontale.
+
+### 8.2 Inserti stampati (tutti verso l'esterno)
+
+Dentro la vasca non sporge nulla: la tastiera occupa tutto il vano.
+
+| Pezzo | Copie | Funzione |
+|---|---|---|
+| Angolare a L frontale | 2 | chiude l'angolo parete/parete/fondo |
+| Angolare a L posteriore | 2 | come sopra + **foro passante perno B2** |
+| Boss perno B1 | 2 | perno fisso B1 sulla parete laterale |
+| Staffa a T laterale | 6 | rinforzo bordo parete laterale/fondo |
+| Staffa a T frontale/posteriore | 4 | rinforzo bordo pareti corte |
+| Cappa laterale | 2 | bordo superiore parete laterale (il coperchio vi appoggia) |
+| Cappa frontale/posteriore | 4 | bordo superiore pareti corte + **alloggio magnete** |
+| Orecchio | 2 | cerniera: perni P1/P2 + fissaggio al bordo del pannello |
+| Fermo tablet (segmenti) | 2 | bordo inferiore del coperchio, ferma il tablet |
+| Guida tablet | 2 | guide laterali sulla faccia del pannello |
+| Biella1 / biella2 | 2 + 2 | cerniera a gomito |
+| Perni cerniera | 8 | barre Ø3: **P1 = 8,6 · B1 = 9,2 · P2 = 13,2 · B2 = 13,8 mm** |
+
+Tutti gli inserti si **posizionano** sui pannelli con perni Ø2 e si fissano
+poi con colla (epossidica o cianoacrilica).
+
+### 8.3 Giunti a perno (`f_cieco`)
+
+Ogni inserto ha 2 maschi/fori di posizione; nel pannello il foro è passante
+Ø `f_pin + f_pin_g` = Ø2,2 (posizione nel sagomo).
+
+- **`f_cieco = true`** — maschi Ø `f_pin` × `fx_t` (2 × 2 mm) stampati
+  sull'inserto, press-fit nel foro del pannello: giunto permanente (colla).
+- **`f_cieco = false`** (predefinito) — foro passante anche nell'inserto:
+  si usano **barre Ø2** tagliate a misura (8 mm per angoli, boss, staffe,
+  orecchio, fermo e guide; 3,5 mm per le cappe). Il giunto resta
+  **smontabile** tirando la barra.
+
+I perni della cerniera (B1, B2, P1, P2) restano **barre da 3 mm**, con foro
+passante nel boss/angolare: il perno entra da fuori e poggia sulla faccia
+esterna della parete.
+
+### 8.4 Animazioni della versione forex
+
+Due GIF generate con la CLI di OpenSCAD (2026.11.14) dalla versione forex:
+
+**Assemblaggio** — le fasi 1–6: tastiera nel fondo forex, orecchie sui bordi
+del pannello, coperchio, bielle a gomito, perni da 3 mm
+(`animazione = "assembla"`, 72 frame @ 640×480):
+
+![Assemblaggio versione forex](img/forex_assemblaggio.gif)
+
+**Funzionamento** — apertura 0→55° (il coperchio retrocede e si appoggia
+sullo spigolo della parete posteriore) e tablet che scorre fino al fermo
+(`animazione = "apri"`, 48 frame @ 800×600):
+
+![Funzionamento versione forex](img/forex_funzionamento.gif)
+
+Procedura per rigenerarle (uguale alla §5.4, con le dimensioni in tabella):
+
+```sh
+openscad -o frame.png --imgsize 640,480 --animate 72 \
+         custodia_tastiera_forex.scad -D 'animazione="assembla"'
+openscad -o frame.png --imgsize 800,600 --animate 48 \
+         custodia_tastiera_forex.scad -D 'animazione="apri"'
+```
+
+Le fasi 2/3 mostrano il **pannello coperchio come fantasma semitrasparente**
+(come il fondo e le pareti): i pannelli di forex non si stampano, quindi
+nella scena sono rappresentati trasparenti con il colore del PVC.
+
+### 8.5 Stampa e montaggio (versione forex)
+
+- **Letto di stampa**: nessun pezzo supera ~165 mm (cappe e fermo sono
+  segmentati: `cappe_n = 2`, `fermo_n = 2`).
+- **Materiale**: PETG per gli inserti strutturali (angolari, cappe, boss,
+  orecchie, fermo); le staffe possono essere PLA. Riempimento ≥ 25 %,
+  3 perimetrature; orecchie e bielle al 100 % o 6 perimetrature.
+- **Supporti**: non necessari.
+- **Sequenza di montaggio**:
+  1. stampa i sagomi (`mostra = "pannelli"`) e ritaglia i 5 pannelli,
+     forando dove marcato (foro Ø2,2; per orecchie/fermo fora il bordo,
+     in orizzontale; ritaglia la fessura cavi nel posteriore),
+  2. incolla le pareti sul fondo (linea di colla continua sui bordi),
+  3. applica gli inserti con i perni Ø2 di posizione + colla: angolari,
+     staffe, cappe (incolla i magneti Ø4×2 a filo nelle cappe e usa
+     rondelle/dischi ferrosi sul coperchio, il forex non è ferromagnetico),
+  4. boss B1 sulle pareti laterali (i perni Ø3 si spingono da fuori),
+  5. coperchio: incolla fermo e guide sul pannello (perni Ø2 + colla),
+     poi le orecchie contro i bordi laterali,
+  6. bielle e perni Ø3 come nella versione stampata (§6).
+- **Tablet pesanti**: la parete posteriore da 2 mm sostiene il finecorsa:
+  per carichi elevati incolla un secondo strato di forex dietro la parete
+  (sandwich) o rinforza con le cappe più spesse (`cap_t`).
+
+### 8.6 Parametri principali (versione forex)
+
+| Gruppo | Parametri | Note |
+|---|---|---|
+| Forex | `fx_t, top_gap` | spessore pannelli, gioco sopra i keycap |
+| Perni di posizione | `f_pin, f_pin_g, f_cieco, f_bar_prof` | Ø2, gioco, maschi/barre |
+| Cerniera | `pin_d, link_t, ear_t, g, link_w, ear_r, ang_open, lp1_u, lp2_u, piv_v, zb1, zb2` | identica alla versione compatta |
+| Bielle a gomito | `bielle_gomito, gomito1_f, gomito1_e, gomito2_f, gomito2_e` | |
+| Inserti base | `leg_t, leg_l, leg_h, boss_w, boss_t, t_len, t_h, ins_t_lat, ins_t_fr` | angolari, boss, staffe |
+| Cappe | `cap_t, cap_h, cappe_n` | bordi superiori, segmentazione |
+| Cavi | `pass_w, pass_h` | fessura nella parete posteriore |
+| Coperchio | `fermo_t, fermo_n, fermo_tab, guide_t, guide_l, guide_u0, guide_tab` | fermo e guide |
+| Magneti | `usa_magneti, mag_d, mag_h, mag_p1, mag_p2` | alloggi nelle cappe |
+
+Le `assert` bloccano la compilazione con messaggi chiari in caso di
+sovrapposizioni tra inserti o perni fuori sede.
 
 ---
 
