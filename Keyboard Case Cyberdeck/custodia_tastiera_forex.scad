@@ -9,11 +9,13 @@
 //  si riduce a INSERTI di raccordo, tutti applicati VERSO L'ESTERNO dei
 //  pannelli: dentro la vasca non sporge nulla perche' la tastiera occupa
 //  tutto il vano (gioco solo tol).
-//    - 4 angolari a L agli spigoli (quelli posteriori ospitano il foro B2)
-//    - staffe a T sui bordi esterni delle pareti (rinforzo)
+//    - 2 nervi laterali: pezzo unico per parete, dallo spigolo posteriore a
+//      quello frontale, con i fori passanti dei perni B1 e B2 (a cui si
+//      agganciano le bielle) e le alette che avvolgono gli spigoli sulle
+//      pareti corte
+//    - staffe a T sulle pareti frontale/posteriore (rinforzo)
 //    - cappe sui bordi superiori (il coperchio vi si appoggia; quelle
 //      frontale/posteriore ospitano i magneti)
-//    - boss esterni sulle pareti laterali per i perni B1 della cerniera
 //    - orecchie, fermo e guide del coperchio: piatti incollati contro i
 //      bordi del pannello coperchio
 //  La cerniera (quadrilatero articolato, apertura 55 gradi, bielle a gomito)
@@ -49,7 +51,7 @@
 $fn  = 32;
 
 /* [Visualizzazione] */
-mostra      = "assieme"; // ["assieme","base_assieme","stampa","pannelli","angolo_front","angolo_rear","nervo_B1","staffa_t","cappa_lat","cappa_fr","orecchio","fermo","guida","biella1","biella2"]
+mostra      = "assieme"; // ["assieme","base_assieme","stampa","pannelli","nervo","staffa_fr","cappa_lat","cappa_fr","orecchio","fermo","guida","biella1","biella2"]
 animazione  = "nessuna"; // ["nessuna","tutto","assembla","apri"]
 t_manuale   = 0;         // >0: forza l'istante dell'animazione (0..1)
 camera_auto = true;      // false: disattiva la camera impostata qui
@@ -97,15 +99,13 @@ gomito2_f = 0.5;   // posizione gomito biella2 (frazione B->P)
 gomito2_e = -6;    // curvatura gomito biella2 (locale -y = su a chiuso) [mm]
 
 /* [Inserti base] */
-leg_t = 4;        // spessore delle gambe degli angolari a L [mm]
-leg_l = 24;       // lunghezza delle gambe degli angolari [mm]
-leg_h = 14;       // altezza delle gambe degli angolari [mm]
-boss_w = 18;      // larghezza (lungo X) del boss perno B1 [mm]
-boss_t = 4;       // spessore (lungo Y) del boss perno B1 [mm]
+leg_t = 4;        // spessore della traversa e delle alette del nervo [mm]
+leg_l = 24;       // lunghezza delle alette del nervo sugli spigoli [mm]
+leg_h = 14;       // altezza della traversa del nervo [mm]
 t_len  = 20;      // lunghezza delle staffe a T [mm]
 t_h    = 12;      // altezza delle staffe a T [mm]
-ins_t_lat = [0.35];          // posizioni staffe T pareti laterali (frazioni vano)
-ins_t_fr  = [0.3, 0.7];      // posizioni staffe T pareti frontale/posteriore
+ins_t_fr  = [0.3, 0.7];                // posizioni staffe T pareti frontale/posteriore
+nervo_tab_fr = [0.09, 0.3, 0.7, 0.91]; // perni del nervo lungo la parete (frazioni)
 
 /* [Cappe superiori] */
 cap_t   = 2;      // spessore delle cappe [mm]
@@ -142,7 +142,7 @@ vpr_cam = [62, 0, 215];
 vpt_cam = [100, 0, 70];
 vpd_cam = 1250;
 vpr_lay = [62, 0, 215];
-vpt_lay = [95, 80, 0];
+vpt_lay = [82, 84, 0];
 vpd_lay = 2800;
 
 // ---------------------- GRANDEZZE DERIVATE --------------------------------
@@ -181,9 +181,7 @@ perno_lung_P2 = ear_t + g + link_t + g + link_t; // orecchio + (aria) + biella2
 // posizioni derivate
 cap_lat_x0  = lp2_u + ear_r + 2;                 // inizio cappa laterale
 cap_lat_len = D_kb - fx_t - cap_lat_x0;          // lunghezza cappa laterale
-frA = [0.25, 0.75];                              // frazioni perni angolo frontale
-frR = [0.5, 0.85];                               // frazioni perni angolo posteriore
-tab_z_hub1 = leg_h*0.3;                          // quote perni angolari (locali)
+tab_z_hub1 = leg_h*0.3;                          // quote perni nervo (locali)
 tab_z_hub2 = leg_h*0.7;
 tab_z_t1   = t_h*0.35;                           // quote perni staffe T (locali)
 tab_z_t2   = t_h*0.8;
@@ -195,7 +193,6 @@ assert(lp2_u > lp1_u && piv_v > ear_r,
        str("geometria orecchio non valida:  lp1_u = ", lp1_u, "  lp2_u = ", lp2_u,
            "  piv_v = ", piv_v, "  ear_r = ", ear_r,
            "  (serve lp2_u > lp1_u e piv_v > ear_r)"));
-assert(zb1 - 7 >= fx_t, "perno B1 troppo basso: il boss invaderebbe il fondo");
 assert(usa_magneti == false || mag_h <= cap_t,
        "magnete piu' spesso dello spessore della cappa: riduci mag_h o aumenta cap_t");
 assert(tablet_w/2 + 2*guide_t < pan_w,
@@ -283,24 +280,22 @@ echo(str("SINTESI:  L1 = ", L1, "  L2 = ", L2, "  d12 = ", d12));
 echo(str("PERNI FISSI:  B1 = ", B1, "   B2 = ", B2));
 
 // posizioni derivate dalla cinematica + verifiche di ingombro inserti
-boss1_x0    = B1[0] - boss_w/2;                  // inizio boss B1
-ang_rear_x0 = min(D_kb - leg_l, B2[0] - boss_w/2 - 2); // gamba lat. angolare post.
-assert(B1[0] - boss_w/2 > leg_l + 2,
-       "boss B1 troppo vicino all'angolare frontale: riduci boss_w o sposta la cerniera");
-// le staffe T laterali non devono sovrapporsi a boss B1 ne' agli angolari
-t_lat_bad = [for (f = ins_t_lat)
-    let(xc = fx_t + f*(D_kb - 2*fx_t))
-    if (!((xc + t_len/2 < boss1_x0 - 2) ||
-          (xc - t_len/2 > B1[0] + boss_w/2 + 2 && xc + t_len/2 < ang_rear_x0 - 2)))
-        f];
-assert(len(t_lat_bad) == 0,
-       "staffa T laterale sovrapposta a boss B1 o agli angolari: sposta ins_t_lat");
-assert(B2[0] < D_kb - 3,
-       "foro B2 troppo vicino allo spigolo posteriore");
-assert(B2[0] > ang_rear_x0 + 2 && B2[0] < D_kb - 2,
-       "foro B2 fuori dalla gamba dell'angolare posteriore");
-assert(zb2 > fx_t + 2 && zb2 < fx_t + leg_h - 2,
-       "foro B2 fuori dall'angolare posteriore in altezza");
+assert(zb1 - rp_foro - 2 >= fx_t && zb1 + rp_foro + 2 <= fx_t + leg_h,
+       "foro B1 fuori dalla traversa del nervo laterale in altezza");
+assert(zb2 - rp_foro - 2 >= fx_t && zb2 + rp_foro + 2 <= fx_t + leg_h,
+       "foro B2 fuori dalla traversa del nervo laterale in altezza");
+assert(B1[0] > leg_t + 2 && B1[0] < D_kb - leg_t - 2,
+       "foro B1 fuori dalla traversa del nervo laterale");
+assert(B2[0] + rp_foro + 1 <= D_kb && B2[0] - rp_foro - 1 >= 0,
+       "foro B2 fuori dalla traversa del nervo laterale");
+// i perni del nervo non devono cadere sui fori B1/B2
+nervo_tab_bad = [for (f = nervo_tab_fr)
+    if (min(abs(f*D_kb - B1[0]), abs(f*D_kb - B2[0])) < 4.5) f];
+assert(len(nervo_tab_bad) == 0,
+       "perno del nervo sovrapposto a un foro B1/B2: sposta nervo_tab_fr");
+// le staffe T sulle pareti corte non devono invadere le alette del nervo
+assert(max([for (f = ins_t_fr) abs(-Yw0 + f*Wi)]) + t_len/2 < Yw1 - leg_l - 2,
+       "staffa T frontale/posteriore sovrapposta all'aletta del nervo laterale");
 
 // ---------------- VERIFICHE CINEMATICHE A RUNTIME --------------------------
 // distanza punto-segmento nel piano
@@ -374,6 +369,9 @@ module maschio_x() translate([-1, 0, 0]) rotate([0, 90, 0])
 module foro_x(h)    rotate([0, -90, 0]) cylinder(h = h, d = f_foro);
 module maschio_z() translate([0, 0, 1]) rotate([180, 0, 0])
     cylinder(h = f_tab_l + 1, d = f_pin);
+module maschio_xm() translate([1, 0, 0]) rotate([0, -90, 0])
+    cylinder(h = f_tab_l + 1, d = f_pin);      // verso -x (parete oltre il telao)
+module foro_xm(h)   rotate([0, 90, 0]) cylinder(h = h, d = f_foro);
 module foro_z(h)    cylinder(h = h, d = f_foro);
 
 // ---------------------- PANNELLI DI FOREX (SAGOMI) -------------------------
@@ -385,24 +383,14 @@ module foro_z(h)    cylinder(h = h, d = f_foro);
 module sagomo_fondo() square([D_kb, Wt]);
 
 // 2. PARETE LATERALE (nel piano x, z con z' = z - fx_t)
+// I perni B1/B2 della cerniera non forano la parete: passano solo nel nervo.
 module sagomo_parete_lat() {
     dh = Ztop - fx_t;
     difference() {
         square([D_kb, dh]);
-        // angolari frontali: 2 fori abbinati per gamba laterale
-        for (pr = [[leg_l*frA[0], tab_z_hub1], [leg_l*frA[1], tab_z_hub2]])
-            translate([pr[0], pr[1]]) circle(d = f_foro);
-        // angolari posteriori (gamba allungata, perni lontani dal foro B2)
-        for (pr = [[D_kb - leg_l*frR[0], tab_z_hub1],
-                   [D_kb - leg_l*frR[1], tab_z_hub2]])
-            translate([pr[0], pr[1]]) circle(d = f_foro);
-        // boss B1: 2 fori per lato
-        for (xx = [B1[0] - 5, B1[0] + 5])
-            translate([xx, zb1 - fx_t]) circle(d = f_foro);
-        // staffe a T laterali: 2 fori abbinati ciascuna
-        for (f = ins_t_lat,
-             pr = [[-t_len*0.25, tab_z_t1], [t_len*0.25, tab_z_t2]])
-            translate([fx_t + f*(D_kb - 2*fx_t) + pr[0], pr[1]])
+        // nervo laterale: fori lungo la traversa (alternati alto/basso)
+        for (i = [0:len(nervo_tab_fr)-1])
+            translate([nervo_tab_fr[i]*D_kb, i % 2 == 0 ? tab_z_hub1 : tab_z_hub2])
                 circle(d = f_foro);
         // cappa laterale: 2 fori
         for (fr = [0.25, 0.75])
@@ -416,7 +404,7 @@ module sagomo_parete_fr(retro) {
     dh = Ztop - fx_t;
     difference() {
         square([Wi, dh]);
-        // gambe degli angolari su questa parete (entrambi gli spigoli):
+        // alette del nervo laterale su questa parete (entrambi gli spigoli):
         // abbinamento (vicino allo spigolo, basso) / (piu' dentro, alto)
         for (sx = [-1, 1],
              pr = [[Yw1 - 8, tab_z_hub1], [Yw1 - 20, tab_z_hub2]])
@@ -459,72 +447,56 @@ module sagomo_coperchio() {
 // il pezzo esce VERSO L'ESTERNO (+y per i pezzi a normale Y, -x per quelli a
 // normale X); i maschi di posizione puntano VERSO la parete.
 
-// 1. ANGOLARE A L: due piatti sugli esterni di due pareti coniugali.
-//    retro = false (spigolo frontale) / true (posteriore: ospita il foro B2).
-module angolo_pezzo(retro) {
-    fr = retro ? frR : frA;
+// 1. NERVO LATERALE: pezzo unico per parete laterale, dallo spigolo
+//    posteriore a quello frontale. Ospita i FORI PASSANTI dei perni B1 e B2
+//    (a cui si agganciano le bielle) e due alette che avvolgono gli spigoli
+//    sulle facce esterne delle pareti frontale e posteriore.
+//    Telao: x=0 allo spigolo FRONTALE, +x verso il retro; y=0 = faccia contro
+//    la parete (il pezzo esce in +y, verso l'esterno).
+module nervo_laterale_pezzo() {
     difference() {
         union() {
-            // gamba laterale: x 0..leg_l, y 0..leg_t
-            cube([leg_l, leg_t, leg_h]);
-            // gamba frontale/posteriore: x -leg_t..0, y -leg_l..leg_t
+            // traversa lungo tutta la parete laterale
+            cube([D_kb, leg_t, leg_h]);
+            // aletta posteriore (sulla faccia esterna della parete posteriore)
+            translate([D_kb, -leg_l, 0]) cube([leg_t, leg_l + leg_t, leg_h]);
+            // aletta frontale (sulla faccia esterna della parete frontale)
             translate([-leg_t, -leg_l, 0]) cube([leg_t, leg_l + leg_t, leg_h]);
-            if (f_cieco)
-                for (i = [0, 1]) {
-                    translate([leg_l*fr[i], 0, i == 0 ? tab_z_hub1 : tab_z_hub2])
+            if (f_cieco) {
+                // perni lungo la traversa (z alternati alto/basso)
+                for (i = [0:len(nervo_tab_fr)-1])
+                    translate([nervo_tab_fr[i]*D_kb, 0,
+                               i % 2 == 0 ? tab_z_hub1 : tab_z_hub2])
                         maschio_y();
-                    translate([0, -(8 + 12*i), i == 0 ? tab_z_hub1 : tab_z_hub2])
+                // aletta frontale: maschi verso +x (nel pannello frontale)
+                for (i = [0, 1])
+                    translate([0, -(8 + 12*i),
+                               i == 0 ? tab_z_hub1 : tab_z_hub2])
                         maschio_x();
-                }
+                // aletta posteriore: maschi verso -x (nel pannello posteriore)
+                for (i = [0, 1])
+                    translate([D_kb, -(8 + 12*i),
+                               i == 0 ? tab_z_hub1 : tab_z_hub2])
+                        maschio_xm();
+            }
         }
-        if (retro)
-            // foro passante perno B2 (attraversa la gamba laterale)
-            translate([D_kb - B2[0], 0, zb2 - fx_t]) rotate([90, 0, 0])
-                cylinder(h = 2*leg_t + 4, d = pin_d + 0.4, center = true);
-        if (!f_cieco)
-            for (i = [0, 1]) {
-                translate([leg_l*fr[i], 0, i == 0 ? tab_z_hub1 : tab_z_hub2])
+        // fori passanti dei perni B1 e B2 della cerniera
+        for (i = [0, 1])
+            translate([(i == 0 ? B1 : B2)[0], 0, (i == 0 ? zb1 : zb2) - fx_t])
+                rotate([90, 0, 0])
+                    cylinder(h = 2*leg_t + 4, d = pin_d + 0.4, center = true);
+        if (!f_cieco) {
+            for (i = [0:len(nervo_tab_fr)-1])
+                translate([nervo_tab_fr[i]*D_kb, 0,
+                           i % 2 == 0 ? tab_z_hub1 : tab_z_hub2])
                     foro_y(leg_t + 1);
+            for (i = [0, 1]) {
                 translate([0, -(8 + 12*i), i == 0 ? tab_z_hub1 : tab_z_hub2])
                     foro_x(leg_t + 1);
+                translate([D_kb, -(8 + 12*i), i == 0 ? tab_z_hub1 : tab_z_hub2])
+                    foro_xm(leg_t + 1);
             }
-    }
-}
-
-// 2. BOSS PERNO B1 (parete laterale, all'esterno)
-module nervo_B1_pezzo() {
-    difference() {
-        union() {
-            cube([boss_w, boss_t, 14]);
-            if (f_cieco)
-                for (xx = [-5, 5])
-                    translate([boss_w/2 + xx, 0, 7]) maschio_y();
         }
-        // foro passante del perno B1
-        translate([boss_w/2, 0, 7]) rotate([90, 0, 0])
-            cylinder(h = 2*boss_t + 4, d = pin_d + 0.4, center = true);
-        if (!f_cieco)
-            for (xx = [-5, 5])
-                translate([boss_w/2 + xx, 0, 7]) foro_y(boss_t + 1);
-    }
-}
-
-// 3. STAFFA A T (rinforzo bordo parete, all'esterno)
-module staffa_pezzo() {                       // pareti laterali
-    difference() {
-        union() {
-            cube([t_len, cap_t, t_h]);
-            if (f_cieco)
-                for (i = [0, 1])
-                    translate([t_len/2 + (i == 0 ? -t_len*0.25 : t_len*0.25), 0,
-                               i == 0 ? tab_z_t1 : tab_z_t2])
-                        maschio_y();
-        }
-        if (!f_cieco)
-            for (i = [0, 1])
-                translate([t_len/2 + (i == 0 ? -t_len*0.25 : t_len*0.25), 0,
-                           i == 0 ? tab_z_t1 : tab_z_t2])
-                    foro_y(cap_t + 1);
     }
 }
 module staffa_fr_pezzo() {                    // pareti frontale/posteriore
@@ -809,16 +781,9 @@ module coperchio_pannello() color(forex_c)
 module inserti_base_in_posa() {
     for (sy = [-1, 1]) {
         translate([0, sy*Yw1, fx_t]) scale([1, sy, 1])
-            color("SteelBlue") angolo_pezzo(false);
-        translate([D_kb, sy*Yw1, fx_t]) scale([-1, sy, 1])
-            color("CornflowerBlue") angolo_pezzo(true);
-        translate([B1[0], sy*Yw1, zb1 - 7]) scale([1, sy, 1])
-            color("DarkSlateGray") nervo_B1_pezzo();
+            color("SteelBlue") nervo_laterale_pezzo();
         translate([cap_lat_x0, sy*Yw1, Ztop - cap_h]) scale([1, sy, 1])
             color("LightSlateGray") cappa_lat_pezzo();
-        for (f = ins_t_lat)
-            translate([fx_t + f*(D_kb - 2*fx_t), sy*Yw1, fx_t]) scale([1, sy, 1])
-                color("Teal") staffa_pezzo();
     }
     for (f = ins_t_fr) {
         translate([0, -Yw0 + f*Wi, fx_t]) color("Teal") staffa_fr_pezzo();
@@ -880,45 +845,35 @@ module biella_stampa(tipo, px, py) color("OrangeRed")
             biella(tipo == 1 ? L1 : L2);
 
 module piano_stampa() {
-    // colonna lunga (x 0..34): cappe fr + fermo, lunghi in +y
-    //   piatti x [0,2] [5,7] [10,12] [15,17]; maschi +x senza toccare il vicino
-    for (k = [0:2*cappe_n-1]) {
-        translate([2 + k*5, 0, 0]) cappa_fr_pezzo();
-    }
-    translate([26, 0, 0]) fermo_pezzo();   // piatto x [22,26], maschi [26,28]
-    translate([34, 0, 0]) fermo_pezzo();   // piatto x [30,34]
-    // riga A (y 6..64): angolari a L (ingombro locale x [-4,24], y [-24,4])
-    translate([42, 30, 0]) angolo_pezzo(false);   // x 38..66,  y  6..34
-    translate([42, 60, 0]) angolo_pezzo(false);   // x 38..66,  y 36..64
-    translate([80, 30, 0]) angolo_pezzo(true);    // x 76..104, y  6..34
-    translate([80, 60, 0]) angolo_pezzo(true);    // x 76..104, y 36..64
-    // boss B1 (x 108..148, y 2..8)
-    translate([108, 4, 0]) nervo_B1_pezzo();
-    translate([130, 4, 0]) nervo_B1_pezzo();
-    // staffe T laterali (2 per posizione)
-    for (k = [0:len(ins_t_lat)-1]) {
-        translate([108 + k*24, 16, 0]) staffa_pezzo();   // y 16..18
-        translate([108 + k*24, 22, 0]) staffa_pezzo();   // y 22..24
-    }
-    // staffe T frontali/posteriori (2 per posizione)
-    for (k = [0:len(ins_t_fr)-1]) {
-        translate([158 + k*8, 16, 0]) staffa_fr_pezzo();  // x 156..158, y 6..26
-        translate([158 + k*8, 44, 0]) staffa_fr_pezzo();  // y 34..54
-    }
-    // riga B (y 72..106): cappe laterali, orecchie, guide
-    translate([42, 74, 0]) cappa_lat_pezzo();    // x 42..109, y 74..76
-    translate([42, 80, 0]) cappa_lat_pezzo();    // y 80..82
-    translate([114, 74, 0]) orecchio_stampa_p(); // x 115..171, y 74..78
-    translate([114, 82, 0]) orecchio_stampa_p(); // y 82..86
-    translate([114, 94, 0]) guida_pezzo();       // x 114..159, y 94..98
-    translate([114, 102, 0]) guida_pezzo();      // y 102..106
-    // riga C (y 112..148): bielle in colonna
-    biella_stampa(1, 44, 116);   // x 38..114, y 112..116
-    biella_stampa(1, 44, 126);   // y 122..126
-    biella_stampa(2, 44, 138);   // x 38..124, y 134..138
-    biella_stampa(2, 44, 148);   // y 144..148
+    // riga 1: pezzi lunghi ruotati (cappe fr + fermo): x 0..163, y 2..42
+    for (k = [0:2*cappe_n-1])
+        translate([0, 2 + 7*k, 0]) rotate([0, 0, -90]) cappa_fr_pezzo();
+    translate([0, 30, 0]) rotate([0, 0, -90]) fermo_pezzo();
+    translate([0, 38, 0]) rotate([0, 0, -90]) fermo_pezzo();
+    // nervi laterali (2): pezzo unico lungo la parete (x -4..132, y -24..4)
+    translate([4, 68, 0])  nervo_laterale_pezzo();  // x 0..136, y 44..72
+    translate([4, 104, 0]) nervo_laterale_pezzo();  // y 80..108
+    // cappe laterali (2)
+    translate([4, 116, 0]) cappa_lat_pezzo();     // x 4..71, y 116..118
+    translate([4, 124, 0]) cappa_lat_pezzo();     // y 124..126
+    // orecchie (2)
+    translate([76, 116, 0]) orecchio_stampa_p();  // x 77..133, y 116..120
+    translate([76, 124, 0]) orecchio_stampa_p();  // y 124..128
+    // guide (2)
+    translate([30, 136, 0]) guida_pezzo();        // x 30..75, y 136..140
+    translate([30, 144, 0]) guida_pezzo();        // y 144..148
+    // staffe T frontali/posteriori (4)
+    translate([4, 138, 0])  staffa_fr_pezzo();    // x 2..4, y 128..148
+    translate([10, 138, 0]) staffa_fr_pezzo();
+    translate([4, 162, 0])  staffa_fr_pezzo();    // y 152..172
+    translate([10, 162, 0]) staffa_fr_pezzo();
+    // bielle (4) ruotate in colonna a destra
+    translate([144, 146, 0]) rotate([0, 0, -90]) biella_stampa(1, 0, 0);  // x 140..144, y 70..152
+    translate([150, 146, 0]) rotate([0, 0, -90]) biella_stampa(1, 0, 0);
+    translate([156, 150, 0]) rotate([0, 0, -90]) biella_stampa(2, 0, 0);  // x 152..156, y 72..158
+    translate([162, 150, 0]) rotate([0, 0, -90]) biella_stampa(2, 0, 0);
     // perni della cerniera (opzione)
-    if (stampa_perni) translate([44, 162, 0]) color("Silver") perni_stampa();
+    if (stampa_perni) translate([30, 178, 0]) color("Silver") perni_stampa();
 }
 
 // vista dei sagomi forex (da ritagliare)
@@ -1003,12 +958,11 @@ if (animazione == "nessuna") {
     else if (mostra == "base_assieme") { pannelli_base_in_posa(); inserti_base_in_posa(); }
     else if (mostra == "stampa")       piano_stampa();
     else if (mostra == "pannelli")     pannelli_vista();
-    else if (mostra == "angolo_front") { angolo_pezzo(false); translate([34, 0, 0]) angolo_pezzo(false); }
-    else if (mostra == "angolo_rear")  { angolo_pezzo(true);  translate([34, 0, 0]) angolo_pezzo(true); }
-    else if (mostra == "nervo_B1")     { nervo_B1_pezzo(); translate([26, 0, 0]) nervo_B1_pezzo(); }
-    else if (mostra == "staffa_t")     { staffa_pezzo(); translate([26, 0, 0]) staffa_pezzo();
-                                         translate([52, 0, 0]) staffa_fr_pezzo(); translate([78, 0, 0]) staffa_fr_pezzo(); }
-    else if (mostra == "cappa_lat")    { cappa_lat_pezzo(); translate([cap_lat_len + 8, 0, 0]) cappa_lat_pezzo(); }
+    else if (mostra == "nervo")      { nervo_laterale_pezzo(); translate([0, 32, 0]) nervo_laterale_pezzo(); }
+    else if (mostra == "staffa_fr")  for (k = [0:len(ins_t_fr)-1]) {
+                                         translate([k*8, 0, 0])  staffa_fr_pezzo();
+                                         translate([k*8, -24, 0]) staffa_fr_pezzo(); }
+    else if (mostra == "cappa_lat")  { cappa_lat_pezzo(); translate([cap_lat_len + 8, 0, 0]) cappa_lat_pezzo(); }
     else if (mostra == "cappa_fr")     { cappa_fr_pezzo(); translate([8, -8, 0]) cappa_fr_pezzo(); }
     else if (mostra == "orecchio")     { orecchio_stampa_p(); translate([64, 0, 0]) orecchio_stampa_p(); }
     else if (mostra == "fermo")        for (i = [0:fermo_n-1])

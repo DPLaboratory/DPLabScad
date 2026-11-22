@@ -442,8 +442,8 @@ Tutte le facce piane sono forex da `fx_t = 2` mm. Con i valori predefiniti
 | Pannello | Misure (mm) | Note |
 |---|---|---|
 | Fondo | 325,2 × 128 | le pareti vi si incollano sopra |
-| Pareti laterali (2) | 128 × 35 | fori per angolari, staffe, boss B1, cappe |
-| Parete frontale | 321,2 × 35 | fori per angolari, staffe, cappe |
+| Pareti laterali (2) | 128 × 35 | fori del nervo laterale e delle cappe laterali |
+| Parete frontale | 321,2 × 35 | fori delle alette del nervo, staffe e cappe |
 | Parete posteriore | 321,2 × 35 | come la frontale + **fessura cavi 20 × 10** da ritagliare al fondo |
 | Coperchio | 128 × 326,4 | fori guide + segni fori orecchie/fermo |
 
@@ -464,10 +464,7 @@ Dentro la vasca non sporge nulla: la tastiera occupa tutto il vano.
 
 | Pezzo | Copie | Funzione |
 |---|---|---|
-| Angolare a L frontale | 2 | chiude l'angolo parete/parete/fondo |
-| Angolare a L posteriore | 2 | come sopra + **foro passante perno B2** |
-| Boss perno B1 | 2 | perno fisso B1 sulla parete laterale |
-| Staffa a T laterale | 6 | rinforzo bordo parete laterale/fondo |
+| Nervo laterale | 2 | traversa unica per parete laterale, dallo spigolo posteriore a quello frontale: **fori passanti perni B1 e B2** (aggancio bielle) + alette sugli spigoli delle pareti corte |
 | Staffa a T frontale/posteriore | 4 | rinforzo bordo pareti corte |
 | Cappa laterale | 2 | bordo superiore parete laterale (il coperchio vi appoggia) |
 | Cappa frontale/posteriore | 4 | bordo superiore pareti corte + **alloggio magnete** |
@@ -529,7 +526,7 @@ nella scena sono rappresentati trasparenti con il colore del PVC.
 
 - **Letto di stampa**: nessun pezzo supera ~165 mm (cappe e fermo sono
   segmentati: `cappe_n = 2`, `fermo_n = 2`).
-- **Materiale**: PETG per gli inserti strutturali (angolari, cappe, boss,
+- **Materiale**: PETG per gli inserti strutturali (nervi laterali, cappe,
   orecchie, fermo); le staffe possono essere PLA. Riempimento ≥ 25 %,
   3 perimetrature; orecchie e bielle al 100 % o 6 perimetrature.
 - **Supporti**: non necessari.
@@ -538,10 +535,10 @@ nella scena sono rappresentati trasparenti con il colore del PVC.
      forando dove marcato (foro Ø2,2; per orecchie/fermo fora il bordo,
      in orizzontale; ritaglia la fessura cavi nel posteriore),
   2. incolla le pareti sul fondo (linea di colla continua sui bordi),
-  3. applica gli inserti con i perni Ø2 di posizione + colla: angolari,
-     staffe, cappe (incolla i magneti Ø4×2 a filo nelle cappe e usa
+  3. applica gli inserti con i perni Ø2 di posizione + colla: nervi
+     laterali, staffe, cappe (incolla i magneti Ø4×2 a filo nelle cappe e usa
      rondelle/dischi ferrosi sul coperchio, il forex non è ferromagnetico),
-  4. boss B1 sulle pareti laterali (i perni Ø3 si spingono da fuori),
+  4. i perni Ø3 delle cerniere si spingono da fuori nei fori del nervo,
   5. coperchio: incolla fermo e guide sul pannello (perni Ø2 + colla),
      poi le orecchie contro i bordi laterali,
   6. bielle e perni Ø3 come nella versione stampata (§6).
@@ -557,7 +554,7 @@ nella scena sono rappresentati trasparenti con il colore del PVC.
 | Perni di posizione | `f_pin, f_pin_g, f_cieco, f_bar_prof` | Ø2, gioco, maschi/barre |
 | Cerniera | `pin_d, link_t, ear_t, g, link_w, ear_r, ang_open, lp1_u, lp2_u, piv_v, zb1, zb2` | identica alla versione compatta |
 | Bielle a gomito | `bielle_gomito, gomito1_f, gomito1_e, gomito2_f, gomito2_e` | |
-| Inserti base | `leg_t, leg_l, leg_h, boss_w, boss_t, t_len, t_h, ins_t_lat, ins_t_fr` | angolari, boss, staffe |
+| Inserti base | `leg_t, leg_l, leg_h, t_len, t_h, ins_t_fr, nervo_tab_fr` | nervo laterale, staffe |
 | Cappe | `cap_t, cap_h, cappe_n` | bordi superiori, segmentazione |
 | Cavi | `pass_w, pass_h` | fessura nella parete posteriore |
 | Coperchio | `fermo_t, fermo_n, fermo_tab, guide_t, guide_l, guide_u0, guide_tab` | fermo e guide |
