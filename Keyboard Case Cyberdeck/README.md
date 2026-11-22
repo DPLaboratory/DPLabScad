@@ -441,11 +441,11 @@ Tutte le facce piane sono forex da `fx_t = 2` mm. Con i valori predefiniti
 
 | Pannello | Misure (mm) | Note |
 |---|---|---|
-| Fondo | 325,2 × 128 | le pareti vi si incollano sopra |
-| Pareti laterali (2) | 128 × 35 | fori del nervo laterale e delle cappe laterali |
-| Parete frontale | 321,2 × 35 | fori delle alette del nervo, staffe e cappe |
-| Parete posteriore | 321,2 × 35 | come la frontale + **fessura cavi 20 × 10** da ritagliare al fondo |
-| Coperchio | 128 × 326,4 | fori guide + segni fori orecchie/fermo |
+| Fondo | 329,2 × 128 | aggetto di 2 mm per lato: il bordo entra nella scanalatura del nervo laterale |
+| Pareti laterali (2) | 128 × 33 | fori del nervo laterale e delle cappe laterali; il bordo superiore entra nello scasso della cappa |
+| Parete frontale | 321,2 × 33 | fori delle alette del nervo, staffe e cappe; bordo superiore nello scasso della cappa |
+| Parete posteriore | 321,2 × 33 | come la frontale + **fessura cavi 20 × 10** da ritagliare al fondo |
+| Coperchio | 131 × 332,4 | sporge di 3 mm in avanti (il bordo entra nello scasso del fermo) e per lato (negli scassi delle orecchie); fori guide + segni di posizione |
 
 Le misure si ricalcolano dai parametri: a ogni compilazione gli `echo`
 riportano le dimensioni aggiornate. Con i valori predefiniti la cerniera
@@ -475,7 +475,19 @@ Dentro la vasca non sporge nulla: la tastiera occupa tutto il vano.
 | Perni cerniera | 8 | barre Ø3: **P1 = 8,6 · B1 = 9,2 · P2 = 13,2 · B2 = 13,8 mm** |
 
 Tutti gli inserti si **posizionano** sui pannelli con perni Ø2 e si fissano
-poi con colla (epossidica o cianoacrilica).
+poi con colla (epossidica o cianoacrilica). Dove il pezzo incontra un **bordo**
+del pannello, il fissaggio è a **scasso**: il forex entra dentro il pezzo
+stampato e resta ingranato, non solo incollato:
+
+- **cappe** = sellhe di incastro sul bordo superiore delle pareti (i pannelli
+  sono accorciati di `cap_t` e il ponte della sella riporta il sostegno del
+  coperchio a filo, a Ztop);
+- **orecchie e fermo** = scasso (tasca) in cui scorre il bordo del pannello
+  coperchio, con labbro di chiusura;
+- **nervo e staffe** = labbro a filo fondo che cattura il bordo laterale del
+  fondo, impedendogli di scivolare verso l'esterno;
+- le **guide** del tablet sono a metà faccia (nessun bordo disponibile):
+  restano a perni Ø2 + colla.
 
 ### 8.3 Giunti a perno (`f_cieco`)
 

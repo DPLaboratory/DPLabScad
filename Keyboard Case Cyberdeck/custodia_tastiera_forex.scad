@@ -70,6 +70,7 @@ tablet_t = 8;     // spessore tablet [mm]
 /* [Forex (pannelli)] */
 fx_t    = 2;      // spessore dei pannelli di forex [mm]
 top_gap = 3;      // gioco sopra i keycap a coperchio chiuso [mm]
+tasca_prof = 3;   // profondita' degli scassi in cui entra il bordo del pannello [mm]
 
 /* [Perni di posizione] */
 f_pin      = 2;   // diametro perni di posizione [mm]
@@ -162,13 +163,14 @@ Yl20 = Yl11 + g;        // faccia interna biella2
 Yl21 = Yl20 + link_t;   // faccia esterna biella2
 Wl   = 2*Ye1;                                 // larghezza totale coperchio
 
-pan_w   = Ye0;                     // semilarghezza del pannello coperchio
+pan_w   = Ye0 + tasca_prof;        // semilarghezza pannello: il bordo entra
+                                   // nello scasso dell'orecchio (tasca_prof)
+fond_ag = leg_t/2;                 // aggetto del fondo: entra nella scanalatura
+                                   // del nervo laterale
 h_fermo = tablet_t + 3;            // altezza fermo sopra la faccia tablet
 rp_foro = (pin_d + 0.4)/2;         // raggio fori perni cerniera (gioco 0.4)
 f_tab_l = fx_t;                    // lunghezza maschi (= spessore pannello)
 f_foro  = f_pin + f_pin_g;         // diametro foro nel pannello
-vit_u1  = lp1_u + (lp2_u - lp1_u)/4;   // perno orecchio 1 lungo il bordo
-vit_u2  = lp2_u - (lp2_u - lp1_u)/4;   // perno orecchio 2 lungo il bordo
 
 // lunghezze perni cerniera (barre da pin_d): B attraverso biella + aria +
 // boss/angolare (foro passante) e poggia sulla faccia esterna della parete;
@@ -179,8 +181,8 @@ perno_lung_P1 = ear_t + g + link_t;             // orecchio + biella1
 perno_lung_P2 = ear_t + g + link_t + g + link_t; // orecchio + (aria) + biella2
 
 // posizioni derivate
-cap_lat_x0  = lp2_u + ear_r + 2;                 // inizio cappa laterale
-cap_lat_len = D_kb - fx_t - cap_lat_x0;          // lunghezza cappa laterale
+cap_lat_x0  = lp2_u + ear_r + 2;                 // fine zona orecchie nella cappa
+cap_lat_len = D_kb - fx_t;                       // lunghezza cappa laterale
 tab_z_hub1 = leg_h*0.3;                          // quote perni nervo (locali)
 tab_z_hub2 = leg_h*0.7;
 tab_z_t1   = t_h*0.35;                           // quote perni staffe T (locali)
@@ -336,11 +338,13 @@ echo(str("VERIFICHE (min su 21 pose):  P2-biella1 = ", min_P2L1, " (>=", soglia_
 echo(str("PERNI CERNIERA (2 copie ciascuno, barre da ", pin_d, " mm):  P1 = ",
          perno_lung_P1, "  B1 = ", perno_lung_B1, "  P2 = ", perno_lung_P2,
          "  B2 = ", perno_lung_B2));
-echo(str("VERSIONE FOREX (pannelli ", fx_t, " mm):  FONDO = ", Wt, " x ", D_kb,
-         "  |  PARETI LATERALI = ", D_kb, " x ", Ztop - fx_t,
-         "  |  FRONTALE/POSTERIORE = ", Wi, " x ", Ztop - fx_t,
+echo(str("VERSIONE FOREX (pannelli ", fx_t, " mm):  FONDO = ", Wt + 2*fond_ag,
+         " x ", D_kb, " (aggetto ", fond_ag, " mm nei nervi)",
+         "  |  PARETI LATERALI = ", D_kb, " x ", Ztop - cap_t - fx_t,
+         "  |  FRONTALE/POSTERIORE = ", Wi, " x ", Ztop - cap_t - fx_t,
          " (posteriore con fessura ", pass_w, " x ", pass_h,
-         ")  |  COPERCHIO = ", D_kb, " x ", 2*pan_w,
+         "; pareti accorciate di cap_t: il bordo entra nello scasso delle cappe)",
+         "  |  COPERCHIO = ", D_kb, " x ", 2*pan_w,
          ".  Fori nel sagomo: mostra=\"pannelli\"."));
 echo(str(f_cieco
     ? str("GIUNTI: maschi stampati Ø", f_pin, " x ", f_tab_l, " (press-fit nel foro Ø", f_foro, ").")
@@ -379,43 +383,51 @@ module foro_z(h)    cylinder(h = h, d = f_foro);
 // maschere di trapanatura sul forex. I fori "a bordo" (orecchio/fermo) sono
 // segni di posizione: nel reale si fora il BORDO del pannello in orizzontale.
 
-// 1. FONDO: nessun foro (le pareti vi si incollano sopra)
-module sagomo_fondo() square([D_kb, Wt]);
+// 1. FONDO: aggetto di fond_ag per lato: il bordo entra nella scanalatura
+//    del nervo laterale (pareti laterali); i bordi frontale/posteriore sono
+//    catturati dai labbri a filo fondo di nervo (alette) e staffe
+module sagomo_fondo() square([D_kb, Wt + 2*fond_ag]);
 
-// 2. PARETE LATERALE (nel piano x, z con z' = z - fx_t)
+// 2. PARETE LATERALE (nel piano x, z con z' = z - fx_t): altezza ridotta di
+// cap_t perche' il bordo entri nello scasso della cappa; il ponte della cappa
+// riporta il sostegno del coperchio a filo (Ztop).
 // I perni B1/B2 della cerniera non forano la parete: passano solo nel nervo.
 module sagomo_parete_lat() {
-    dh = Ztop - fx_t;
+    dh = Ztop - cap_t - fx_t;
     difference() {
         square([D_kb, dh]);
         // nervo laterale: fori lungo la traversa (alternati alto/basso)
         for (i = [0:len(nervo_tab_fr)-1])
-            translate([nervo_tab_fr[i]*D_kb, i % 2 == 0 ? tab_z_hub1 : tab_z_hub2])
+            translate([nervo_tab_fr[i]*D_kb,
+                       (i % 2 == 0 ? tab_z_hub1 : tab_z_hub2) - fx_t])
                 circle(d = f_foro);
         // cappa laterale: 2 fori
         for (fr = [0.25, 0.75])
-            translate([cap_lat_x0 + cap_lat_len*fr, dh - cap_h + tab_z_cap])
+            translate([cap_lat_x0 + (cap_lat_len - cap_lat_x0)*fr,
+                       dh + cap_t - cap_h + tab_z_cap])
                 circle(d = f_foro);
     }
 }
 
-// 3. PARETE FRONTALE/POSTERIORE (nel piano y, z con z' = z - fx_t)
+// 3. PARETE FRONTALE/POSTERIORE (nel piano y, z con z' = z - fx_t):
+// altezza ridotta di cap_t per lo scasso delle cappe.
 module sagomo_parete_fr(retro) {
-    dh = Ztop - fx_t;
+    dh = Ztop - cap_t - fx_t;
     difference() {
         square([Wi, dh]);
         // alette del nervo laterale su questa parete (entrambi gli spigoli):
         // abbinamento (vicino allo spigolo, basso) / (piu' dentro, alto)
         for (sx = [-1, 1],
-             pr = [[Yw1 - 8, tab_z_hub1], [Yw1 - 20, tab_z_hub2]])
+             pr = [[Yw1 - 8, tab_z_hub1 - fx_t], [Yw1 - 20, tab_z_hub2 - fx_t]])
             translate([Wi/2 + sx*pr[0], pr[1]]) circle(d = f_foro);
         // staffe a T
         for (f = ins_t_fr,
-             pr = [[-t_len*0.25, tab_z_t1], [t_len*0.25, tab_z_t2]])
+             pr = [[-t_len*0.25, tab_z_t1 - fx_t], [t_len*0.25, tab_z_t2 - fx_t]])
             translate([f*Wi + pr[0], pr[1]]) circle(d = f_foro);
         // cappe frontale/posteriore: 2 fori per segmento
         for (i = [0:cappe_n - 1], fr = [0.25, 0.75])
-            translate([i*Wi/cappe_n + fr*Wi/cappe_n, dh - cap_h + tab_z_cap])
+            translate([i*Wi/cappe_n + fr*Wi/cappe_n,
+                       dh + cap_t - cap_h + tab_z_cap])
                 circle(d = f_foro);
         if (retro)
             // fessura cavi: da tagliare nel pannello
@@ -423,22 +435,26 @@ module sagomo_parete_fr(retro) {
     }
 }
 
-// 4. PANNELLO COPERCHIO (nel piano u, y con y' = y + pan_w)
-//    fori VERTICALI tagliati (guide); fori a BORDO solo come segni
+// 4. PANNELLO COPERCHIO (nel piano u, y con y' = y + pan_w): il pannello
+//    sporge di tasca_prof in avanti (bordo nello scasso del fermo) e per
+//    lato (bordo negli scassi delle orecchie).
+//    fori VERTICALI tagliati (guide); i segni sui bordi indicano le posizioni
+//    di orecchie e fermo (lì il bordo entra nei loro scassi).
 module sagomo_coperchio() {
     difference() {
-        square([D_kb, 2*pan_w]);
+        translate([-tasca_prof, 0])
+            square([D_kb + tasca_prof, 2*pan_w]);
         // guide: fori passanti verticali
         for (sy = [-1, 1], fr = guide_tab)
             translate([guide_u0 + fr*guide_l,
                        pan_w + sy*(tablet_w/2 + 1.5*guide_t)])
                 circle(d = f_foro);
-        // segni fori orecchie (sul bordo laterale: foro orizzontale nel reale)
-        for (sy = [0, 2*pan_w], uu = [vit_u1, vit_u2])
+        // segni estremita' scasso orecchie (sul bordo laterale)
+        for (sy = [0, 2*pan_w], uu = [lp1_u, lp2_u])
             translate([uu, sy]) circle(d = f_foro);
-        // segni fori fermo (sul bordo frontale: foro orizzontale nel reale)
+        // segni bocca scasso fermo (sul bordo frontale)
         for (sy = [-1, 1], fr = fermo_tab)
-            translate([fx_t/2, pan_w + sy*pan_w*fr]) circle(d = f_foro);
+            translate([0, pan_w + sy*pan_w*fr]) circle(d = f_foro);
     }
 }
 
@@ -480,9 +496,13 @@ module nervo_laterale_pezzo() {
                         maschio_xm();
             }
         }
+        // scanalatura a filo fondo lungo tutta la traversa: il bordo
+        // laterale del pannello fondo (aggetto fond_ag) vi scorre dentro
+        translate([0, 0, -0.1])
+            cube([D_kb, fond_ag, fx_t + g + 0.2]);
         // fori passanti dei perni B1 e B2 della cerniera
         for (i = [0, 1])
-            translate([(i == 0 ? B1 : B2)[0], 0, (i == 0 ? zb1 : zb2) - fx_t])
+            translate([(i == 0 ? B1 : B2)[0], 0, (i == 0 ? zb1 : zb2)])
                 rotate([90, 0, 0])
                     cylinder(h = 2*leg_t + 4, d = pin_d + 0.4, center = true);
         if (!f_cieco) {
@@ -517,18 +537,30 @@ module staffa_fr_pezzo() {                    // pareti frontale/posteriore
     }
 }
 
-// 4. CAPPA (bordo superiore parete, all'esterno; il coperchio vi si appoggia)
+// 4. CAPPE = SELLHE DI INCASTRO sul bordo superiore delle pareti: il pannello
+//    (accorciato di cap_t) scorre dentro lo scasso; il ponte e' a filo del
+//    bordo (Ztop) e il coperchio vi appoggia come prima.
 module cappa_lat_pezzo() {                    // pareti laterali
+    x0 = cap_lat_x0;                          // fine zona orecchie
+    L  = cap_lat_len - x0;                    // lunghezza sella completa
     difference() {
         union() {
-            cube([cap_lat_len, cap_t, cap_h]);
+            // ponte stretto sulla zona orecchie (la gamba esterna invaderebbe
+            // le orecchie a coperchio chiuso)
+            translate([0, -fx_t - g/2, cap_h - cap_t])
+                cube([x0, fx_t + g/2 + 0.55, cap_t]);
+            // ponte largo + gamba esterna oltre le orecchie
+            translate([x0, -fx_t - g/2, cap_h - cap_t])
+                cube([L, fx_t + g + cap_t, cap_t]);
+            translate([x0, g/2, 0])
+                cube([L, cap_t, cap_h - cap_t]);
             if (f_cieco)
                 for (fr = [0.25, 0.75])
-                    translate([cap_lat_len*fr, 0, tab_z_cap]) maschio_y();
+                    translate([x0 + L*fr, g/2, tab_z_cap]) maschio_y();
         }
         if (!f_cieco)
             for (fr = [0.25, 0.75])
-                translate([cap_lat_len*fr, 0, tab_z_cap]) foro_y(cap_t + 1);
+                translate([x0 + L*fr, g/2, tab_z_cap]) foro_y(cap_t + 1);
     }
 }
 module cappa_fr_pezzo(mag_ly = mag_y1 + Wi/2) {   // frontale/posteriore
@@ -536,19 +568,28 @@ module cappa_fr_pezzo(mag_ly = mag_y1 + Wi/2) {   // frontale/posteriore
     difference() {
         union() {
             difference() {
-                translate([-cap_t, 0, 0]) cube([cap_t, seg_w, cap_h]);
-                // alloggio magnete (attraversa la cappa, si incolla a filo)
-                if (usa_magneti)
-                    translate([-cap_t/2, mag_ly, cap_h - mag_h])
-                        cylinder(h = mag_h + 1, d = mag_d);
+                union() {
+                    // ponte a filo del bordo: lo scasso riceve il pannello
+                    // (ristretto di 2.7 mm all'estremita' esterna per non
+                    // invadere il ponte stretto del nervo all'angolo)
+                    translate([-g/2, 0.5, cap_h - cap_t])
+                        cube([fx_t + g, seg_w - 2.7, cap_t]);
+                    // piastra esterna (fusa al ponte)
+                    translate([-cap_t - g/2, 0, 0])
+                        cube([cap_t, seg_w, cap_h - cap_t + 0.5]);
+                    if (usa_magneti)
+                        translate([-cap_t/2 - g/2, mag_ly,
+                                   cap_h - cap_t - mag_h])
+                            cylinder(h = mag_h + 1, d = mag_d);
+                }
             }
             if (f_cieco)
                 for (fr = [0.25, 0.75])
-                    translate([0, seg_w*fr, tab_z_cap]) maschio_x();
+                    translate([-g/2, seg_w*fr, tab_z_cap]) maschio_x();
         }
         if (!f_cieco)
             for (fr = [0.25, 0.75])
-                translate([0, seg_w*fr, tab_z_cap]) foro_x(cap_t + 1);
+                translate([-g/2, seg_w*fr, tab_z_cap]) foro_x(cap_t + 1);
     }
 }
 
@@ -562,9 +603,10 @@ module profilo_orecchio() {
                 translate(lp1) circle(r = ear_r);
                 translate(lp2) circle(r = ear_r);
             }
-            // pala contro il bordo del pannello (v fino a fx_t + 1)
+            // pala contro il bordo del pannello, con il labbro superiore che
+            // chiude lo scasso (v fino a fx_t + g + 2)
             translate([lp1_u, -(piv_v + ear_r)])
-                square([lp2_u - lp1_u, piv_v + ear_r + fx_t + 1]);
+                square([lp2_u - lp1_u, piv_v + ear_r + fx_t + g + 2]);
         }
         // fori dei perni P1/P2 (orecchio <-> bielle)
         for (lp = [lp1, lp2]) translate(lp) circle(d = pin_d + 0.4);
@@ -604,36 +646,31 @@ module zona_libera_2d(B, lp, L) {
     }
 }
 
-// orecchio solido 3D: profilo estruso lungo Y + giunti di posizione sul bordo
+// orecchio solido 3D: profilo estruso lungo Y + SCASSO in cui scorre il
+// bordo laterale del pannello coperchio (lungo u, con labbro di chiusura in
+// alto collegato dal fondo dello scasso).
 module orecchio_pezzo() {
     difference() {
-        union() {
-            translate([0, ear_t, 0]) estrusa_y(ear_t) profilo_orecchio();
-            if (f_cieco)
-                for (uu = [vit_u1, vit_u2])
-                    translate([uu, 0, fx_t/2]) maschio_y();
-        }
-        if (!f_cieco)
-            for (uu = [vit_u1, vit_u2])
-                translate([uu, 0, fx_t/2]) foro_y(ear_t + 1);
+        translate([0, ear_t, 0]) estrusa_y(ear_t) profilo_orecchio();
+        // scasso: il bordo del pannello (spessore fx_t + gioco) entra dalla
+        // parte interna e scorre lungo u; dietro resta tasca_prof di materia
+        translate([lp1_u - 1, 0, -0.1])
+            cube([lp2_u - lp1_u + 2, tasca_prof, fx_t + g + 0.2]);
     }
 }
 
 // 6. FERMO del tablet (piatto contro il bordo frontale del pannello coperchio)
 // Telao: x=0 = faccia contro il bordo del pannello (il pannello sta in x>0);
 // il fermo esce in -x (fuori dal case) e sale fino a fx_t + h_fermo.
+// SCASSO: il bordo frontale del pannello scorre dentro (lungo y), trattenuto
+// dal labbro superiore a v = fx_t + g.
 module fermo_pezzo() {
     seg_fw = 2*pan_w/fermo_n;
     difference() {
-        union() {
-            translate([-fermo_t, 0, 0]) cube([fermo_t, seg_fw, fx_t + h_fermo]);
-            if (f_cieco)
-                for (fr = fermo_tab)
-                    translate([0, seg_fw*fr, fx_t/2]) maschio_x();
-        }
-        if (!f_cieco)
-            for (fr = fermo_tab)
-                translate([0, seg_fw*fr, fx_t/2]) foro_x(fermo_t + 1);
+        translate([-fermo_t, 0, 0]) cube([fermo_t, seg_fw, fx_t + h_fermo]);
+        // scasso lungo tutto il segmento (aperto ai lati y)
+        translate([-tasca_prof, -1, -0.1])
+            cube([tasca_prof + 0.1, seg_fw + 2, fx_t + g + 0.2]);
     }
 }
 
@@ -759,35 +796,39 @@ module corpo_tastiera() {
 
 // ---------------------- PANNELLI IN POSA (forex) ---------------------------
 module pannelli_base_in_posa() {
-    color(forex_c) translate([0, -Wt/2, 0]) cube([D_kb, Wt, fx_t]);       // fondo
+    color(forex_c) translate([0, -(Wt + 2*fond_ag)/2, 0])
+        cube([D_kb, Wt + 2*fond_ag, fx_t]);                               // fondo
     for (sy = [-1, 1]) color(forex_c)
         translate([0, sy > 0 ? Yw0 : -Yw1, fx_t])
-            cube([D_kb, fx_t, Ztop - fx_t]);                              // laterali
+            cube([D_kb, fx_t, Ztop - cap_t - fx_t]);                      // laterali
     color(forex_c) translate([0, -Yw0, fx_t])
-        cube([fx_t, Wi, Ztop - fx_t]);                                    // frontale
+        cube([fx_t, Wi, Ztop - cap_t - fx_t]);                            // frontale
     color(forex_c) difference() {
         translate([D_kb - fx_t, -Yw0, fx_t])
-            cube([fx_t, Wi, Ztop - fx_t]);                                // posteriore
+            cube([fx_t, Wi, Ztop - cap_t - fx_t]);                        // posteriore
         translate([D_kb - fx_t - 1, -pass_w/2, fx_t])
             cube([fx_t + 2, pass_w, pass_h]);                             // fessura
     }
 }
 
-// pannello coperchio nel riferimento locale del coperchio (u, v)
+// pannello coperchio nel riferimento locale del coperchio (u, v):
+// sporge di tasca_prof oltre il fronte (il bordo entra nello scasso del fermo)
+// e di tasca_prof per lato (il bordo entra negli scassi delle orecchie)
 module coperchio_pannello() color(forex_c)
-    translate([0, -pan_w, 0]) cube([D_kb, 2*pan_w, fx_t]);
+    translate([-tasca_prof, -pan_w, 0])
+        cube([D_kb + tasca_prof, 2*pan_w, fx_t]);
 
 // -------------------------- INSERTI IN POSA --------------------------------
 module inserti_base_in_posa() {
     for (sy = [-1, 1]) {
-        translate([0, sy*Yw1, fx_t]) scale([1, sy, 1])
+        translate([0, sy*Yw1, 0]) scale([1, sy, 1])
             color("SteelBlue") nervo_laterale_pezzo();
-        translate([cap_lat_x0, sy*Yw1, Ztop - cap_h]) scale([1, sy, 1])
+        translate([0, sy*Yw1, Ztop - cap_h]) scale([1, sy, 1])
             color("LightSlateGray") cappa_lat_pezzo();
     }
     for (f = ins_t_fr) {
-        translate([0, -Yw0 + f*Wi, fx_t]) color("Teal") staffa_fr_pezzo();
-        translate([D_kb, -Yw0 + f*Wi, fx_t]) scale([-1, 1, 1]) color("Teal") staffa_fr_pezzo();
+        translate([0, -Yw0 + f*Wi, 0]) color("Teal") staffa_fr_pezzo();
+        translate([D_kb, -Yw0 + f*Wi, 0]) scale([-1, 1, 1]) color("Teal") staffa_fr_pezzo();
     }
     for (i = [0:cappe_n - 1]) {
         translate([0, -Yw0 + i*Wi/cappe_n, Ztop - cap_h])
@@ -845,28 +886,27 @@ module biella_stampa(tipo, px, py) color("OrangeRed")
             biella(tipo == 1 ? L1 : L2);
 
 module piano_stampa() {
-    // riga 1: pezzi lunghi ruotati (cappe fr + fermo): x 0..163, y 2..42
+    // riga 1: pezzi lunghi ruotati (cappe fr + fermo): x 0..163, y 2.1..42
     for (k = [0:2*cappe_n-1])
-        translate([0, 2 + 7*k, 0]) rotate([0, 0, -90]) cappa_fr_pezzo();
+        translate([0, 2.2 + 7*k, 0]) rotate([0, 0, -90]) cappa_fr_pezzo();
     translate([0, 30, 0]) rotate([0, 0, -90]) fermo_pezzo();
     translate([0, 38, 0]) rotate([0, 0, -90]) fermo_pezzo();
     // nervi laterali (2): pezzo unico lungo la parete (x -4..132, y -24..4)
     translate([4, 68, 0])  nervo_laterale_pezzo();  // x 0..136, y 44..72
     translate([4, 104, 0]) nervo_laterale_pezzo();  // y 80..108
-    // cappe laterali (2)
-    translate([4, 116, 0]) cappa_lat_pezzo();     // x 4..71, y 116..118
-    translate([4, 124, 0]) cappa_lat_pezzo();     // y 124..126
-    // orecchie (2)
-    translate([76, 116, 0]) orecchio_stampa_p();  // x 77..133, y 116..120
-    translate([76, 124, 0]) orecchio_stampa_p();  // y 124..128
+    // cappe laterali (2) e orecchie (2)
+    translate([4, 116, 0]) cappa_lat_pezzo();     // x 4..130, y 113.7..118.3
+    translate([4, 124, 0]) cappa_lat_pezzo();     // y 121.7..126.3
+    translate([4, 134, 0]) orecchio_stampa_p();   // x 5..61, y 134..138
+    translate([4, 142, 0]) orecchio_stampa_p();   // y 142..146
     // guide (2)
-    translate([30, 136, 0]) guida_pezzo();        // x 30..75, y 136..140
-    translate([30, 144, 0]) guida_pezzo();        // y 144..148
+    translate([76, 134, 0]) guida_pezzo();        // x 76..121, y 134..138
+    translate([76, 142, 0]) guida_pezzo();        // y 142..146
     // staffe T frontali/posteriori (4)
-    translate([4, 138, 0])  staffa_fr_pezzo();    // x 2..4, y 128..148
-    translate([10, 138, 0]) staffa_fr_pezzo();
-    translate([4, 162, 0])  staffa_fr_pezzo();    // y 152..172
-    translate([10, 162, 0]) staffa_fr_pezzo();
+    translate([2, 158, 0])  staffa_fr_pezzo();    // x -0.3..1.7, y 148..168
+    translate([8, 158, 0])  staffa_fr_pezzo();
+    translate([2, 182, 0])  staffa_fr_pezzo();    // y 172..192
+    translate([8, 182, 0])  staffa_fr_pezzo();
     // bielle (4) ruotate in colonna a destra
     translate([144, 146, 0]) rotate([0, 0, -90]) biella_stampa(1, 0, 0);  // x 140..144, y 70..152
     translate([150, 146, 0]) rotate([0, 0, -90]) biella_stampa(1, 0, 0);
