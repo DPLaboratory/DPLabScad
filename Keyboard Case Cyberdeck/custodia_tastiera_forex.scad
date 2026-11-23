@@ -823,8 +823,8 @@ module inserti_base_in_posa() {
     for (sy = [-1, 1]) {
         translate([0, sy*Yw1, 0]) scale([1, sy, 1])
             color("SteelBlue") nervo_laterale_pezzo();
-        translate([0, sy*Yw1, Ztop - cap_h]) scale([1, sy, 1])
-            color("LightSlateGray") cappa_lat_pezzo();
+        //translate([0, sy*Yw1, Ztop - cap_h]) scale([1, sy, 1])
+        //    color("LightSlateGray") cappa_lat_pezzo();
     }
     for (f = ins_t_fr) {
         translate([0, -Yw0 + f*Wi, 0]) color("Teal") staffa_fr_pezzo();
@@ -893,7 +893,7 @@ module piano_stampa() {
     translate([0, 38, 0]) rotate([0, 0, -90]) fermo_pezzo();
     // nervi laterali (2): pezzo unico lungo la parete (x -4..132, y -24..4)
     translate([4, 68, 0])  nervo_laterale_pezzo();  // x 0..136, y 44..72
-    translate([4, 104, 0]) nervo_laterale_pezzo();  // y 80..108
+    translate([4, 85, 0]) scale([1, -1, 1]) nervo_laterale_pezzo();  // y 80..108
     // cappe laterali (2) e orecchie (2)
     translate([4, 116, 0]) cappa_lat_pezzo();     // x 4..130, y 113.7..118.3
     translate([4, 124, 0]) cappa_lat_pezzo();     // y 121.7..126.3
