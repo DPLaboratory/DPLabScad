@@ -85,7 +85,7 @@ tol         = 0.05;   // tolleranza stampa 3D
 //   "Q"                -> keycap 1u con il testo "Q"
 //   ["Tab", 1.5]       -> keycap larga 1.5u con il testo "Tab"
 //   ["Esc", 1.25, 4.5] -> come sopra, con altezza testo forzata a 4.5 mm
-keys = ["1", "2", "3", "4"];
+keys = ["", "", "", ""];
 
 set_cols       = 6;      // keycap per riga sul piatto di stampa
 set_gap        = 3;      // spazio tra i keycap sul piatto (mm)

@@ -1,7 +1,7 @@
 {
     "fileFormatVersion": "1",
     "parameterSets": {
-        "Nuovo insieme 1": {
+        "2x2": {
             "$fn": "64",
             "auto_fit_text": "true",
             "build_mode": "set",
@@ -15,7 +15,7 @@
             "edge_style": "round",
             "gap": "1.05",
             "key_text": "A",
-            "key_u": "2",
+            "key_u": "1",
             "lego_margin": "1",
             "lego_pitch": "8",
             "lego_rescale": "1",
@@ -29,7 +29,7 @@
             "pitch": "19.050000000000001",
             "round_steps": "12",
             "sep_char": "|",
-            "set_cols": "6",
+            "set_cols": "2",
             "set_gap": "3",
             "stem_d": "5.5999999999999996",
             "stem_h": "3.2999999999999998",
