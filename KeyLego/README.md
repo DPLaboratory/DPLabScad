@@ -41,19 +41,18 @@ Il convertitore gestisce la semantica KLE: stringhe = tasti 1×1;
 
 ## Come è fatta la piastra
 
-- **Mattoncino LEGO a fondo aperto** (`block(type="brick", block_bottom_type="open")`
-  di LEGO.scad): spessore `plate_th` (min 3.2 mm = piastra LEGO), pareti
-  esterne con spline.
+- **Composta da 5 parti LEGO**: 4 mattoncini d'anello (fronte/retro/larghezza
+  `margin_studs`) + il campo tasti centrale, tutti alti `plate_th`
+  (min 3.2 mm = piastra LEGO).
 - Dimensioni: estensione del layout in mm (`1u = 19.05`) + anello di margine
   di `margin_studs` tasselli per lato — è lì che si agganciano pareti e mattoncini.
-- **SOPRA — tasselli solo al bordo**: la `stud_matrix` omette ogni tassello
-  dentro la zona tastiera; restano solo gli anelli di `margin_studs` tasselli
-  per lato, così switch e tasti non incontrano ostacoli.
-- **SOTTO — attacco femmina**: il fondo aperto (cava con pareti e spline,
-  **senza perni interni**) aggancia i mattoncini anche da sotto, e gli switch
-  passano liberamente attraverso le aperture fino sotto la piastra. Nota: la
-  presa femmina è garantita sull'anello perimetrale (dove corrono pareti e
-  spline); sotto il campo tasti la cava resta libera apposta per gli switch.
+- **SOPRA — tasselli solo al bordo**: gli anelli hanno i tasselli solo sul
+  bordo; il campo tasti è privo di tasselli, così switch e tasti non
+  incontrano ostacoli.
+- **SOTTO — attacco femmina ovunque**: ogni parte è un mattoncino a fondo
+  aperto (cava con pareti e spline). Negli anelli ci sono anche pin/perni
+  come nel fondo dei mattoncini originali; nel campo tasti la cava è senza
+  perni apposta per lasciar passare il corpo degli switch.
 - Aperture tasti (parametro `opening`):
   - `switch` — foro `switch_opening` (14.1 mm) centrato sul tasto, per switch MX;
   - `keywell` — vano completo del tasto con cornice `key_frame`;

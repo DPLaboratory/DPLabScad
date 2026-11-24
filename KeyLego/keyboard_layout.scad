@@ -1,4 +1,4 @@
-﻿// AUTO-GENERATO da layout_to_scad.ps1 il 2026-11-24 09:43:17 - non modificare a mano
+// AUTO-GENERATO da layout_to_scad.ps1 il 2026-11-24 10:04:21 - non modificare a mano
 // Sorgente: keyboard_layout.json  (17 tasti, 5 righe)
 
 layout_keys = [

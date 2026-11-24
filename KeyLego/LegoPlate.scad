@@ -6,16 +6,18 @@
  *  Legge il layout della tastiera da keyboard_layout.scad (generato a
  *  partire dal JSON esportato da https://editor.keyboard-tools.xyz con
  *  layout_to_scad.ps1 - la build di OpenSCAD in uso non ha la funzione
- *  import() per i JSON) e genera una baseplate LEGO (usa la libreria
+ *  import() per i JSON) e genera una piastra LEGO (usa la libreria
  *  LEGO.scad di Christopher Finke, vendorsa in questo progetto - MIT).
  *
- *  La piastra ha:
- *   - SOPRA: tasselli LEGO (pitch 8 mm) solo sull'anello di bordo, per
- *     agganciare pareti e altri elementi; la zona tastiera resta pulita
- *     per non disturbare l'inserimento di switch e tasti;
- *   - SOTTO: attacco femmina (fondo aperto "open bottom" con pareti e
- *     spline, niente perni interni) = i mattoncini si agganciano anche
- *     da sotto, e gli switch passano liberamente attraverso le aperture;
+ *  La piastra e' composta da:
+ *   - un ANELLO di bordo di mattoncini LEGO (spessore plate_th):
+ *     SOPRA tasselli solo sul bordo per pareti e altri elementi,
+ *     SOTTO attacco femmina completo (fondo aperto con spline e
+ *     pin/perni, come il fondo di un mattoncino originale);
+ *   - il CAMPO TASTI centrale: mattoncino a fondo aperto SENZA tasselli
+ *     e SENZA perni interni = superficie pulita sopra per non disturbare
+ *     switch e tasti, attacco femmina sotto, cava libera per il corpo
+ *     degli switch che passano attraverso le aperture;
  *   - aperture per i tasti: fori da 14 mm per switch MX, vani completi
  *     per ogni tasto, oppure piastra piena senza fori.
  *
@@ -61,7 +63,6 @@ show_example_walls = false;
 /* [Nascosto] */
 stud_pitch = 8;   // passo dei tasselli LEGO
 wall_play  = 0.1; // gioco fra mattoncini adiacenti (come in LEGO.scad)
-stud_d     = 4.8; // diametro nominale tassello
 stud_h     = 1.8; // altezza tassello
 brick_unit_th  = 9.6; // altezza di 1 mattoncino LEGO
 
@@ -112,67 +113,60 @@ function opening_rect(r) =
 openings = opening == "none" ? [] : [ for (r = key_rects) opening_rect(r) ];
 
 // ------------------------------------------------------------------
-// Matrice dei tasselli: presenti SOLO sull'anello di bordo; dentro la
-// zona tastiera nessun tassello, per non disturbare switch e tasti.
-// (LEGO.scad: "*" = tassello presente, "." = tassello omesso)
-//
-// Attenzione: LEGO.scad disegna SEMPRE il lato lungo del block() lungo X
-// (width e length vengono scambiati internamente): se studs[1] > studs[0]
-// la piastra va ruotata di 90 gradi, e la matrice costruita nelle
-// coordinate ruotate (con x specchiata).
-// ------------------------------------------------------------------
-
-plate_rot      = studs[0] >= studs[1] ? 0 : 90;
-matrix_columns = plate_rot == 0 ? studs[0] : studs[1];
-matrix_rows    = plate_rot == 0 ? studs[1] : studs[0];
-
-keepout = stud_d * stud_rescale / 2 + 0.4;
-
-// Zona tastiera in coordinate piastra
-key_area = [ origin[0], origin[1], area[0], area[1] ];
-
-function in_rect(p, r, pad = 0) =
-    p[0] > r[0] - pad && p[0] < r[0] + r[2] + pad &&
-    p[1] > r[1] - pad && p[1] < r[1] + r[3] + pad;
-
-function stud_center(i) = -wall_play + stud_d * stud_rescale / 2 + i * stud_pitch;
-
-// Coordinate piastra del tassello (i, j) della matrice disegnata
-// (i = colonna lungo il lato lungo disegnato, j = riga)
-function matrix_point(i, j) =
-    plate_rot == 0 ? [ stud_center(i), stud_center(j) ]
-                   : [ plate[0] - stud_center(j), stud_center(i) ];
-
-// Tassello omesso se cade nella zona tastiera oppure, con margini
-// piccolissimi, se un'apertura lo sfiora.
-function excluded(p) =
-    in_rect(p, key_area, 0.2) ||
-    [ for (o = openings) if (in_rect(p, o, keepout)) 1 ] != [];
-
-stud_matrix = chr([ for (j = [0 : matrix_rows - 1], i = [0 : matrix_columns - 1])
-                      excluded(matrix_point(i, j)) ? 46 : 42 ]);
-
-// ------------------------------------------------------------------
 // Moduli
 // ------------------------------------------------------------------
 
-// Piastra = mattoncino LEGO a fondo aperto (attacco femmina sotto):
-// pareti esterne con spline, nessun perno interno (gli switch passano
-// attraverso le aperture fino sotto la piastra), tasselli solo al bordo.
+// Posiziona un mattoncino LEGO.scad con l'angolo su (cx, cy) in
+// coordinate piastra, base a quota z.
+// Attenzione: LEGO.scad disegna SEMPRE il lato lungo del block() lungo X
+// (width e length vengono scambiati internamente): con rot=90 il
+// mattoncino corre lungo Y. (width, length) = dimensioni logiche.
+module brick_at(width, length, cx, cy, z, rot = 0, height = 1,
+                stud_matrix = "", matrix_columns = 0, posts = true) {
+    oL = max(width, length) * stud_pitch - 2 * wall_play;
+    oW = min(width, length) * stud_pitch - 2 * wall_play;
+    translate(rot == 0 ? [ cx + oL / 2, cy + oW / 2, z ]
+                       : [ cx + oW / 2, cy + oL / 2, z ])
+        rotate([0, 0, rot])
+            block(width = width, length = length, height = height,
+                  stud_rescale = stud_rescale,
+                  with_posts = posts,
+                  stud_matrix_string = stud_matrix,
+                  stud_matrix_columns = matrix_columns);
+}
+
+// Anello di bordo + campo tasti.
 module lego_plate() {
-    translate([ plate[0] / 2, plate[1] / 2, 0 ])
-        rotate([0, 0, plate_rot])
-            block(
-                width  = min(studs[0], studs[1]),
-                length = max(studs[0], studs[1]),
-                height = plate_th / brick_unit_th,
-                type   = "brick",
-                block_bottom_type = "open",
-                with_posts = false,
-                stud_rescale        = stud_rescale,
-                stud_matrix_string  = stud_matrix,
-                stud_matrix_columns = matrix_columns
-            );
+    h = plate_th / brick_unit_th;
+    m = margin_studs;
+    if (m > 0) {
+        // Anello: mattoncini con tasselli sopra (solo bordo) e attacco
+        // femmina sotto (fondo aperto con spline e pin/perni)
+        brick_at(m, studs[0], 0, 0, 0, height = h);                              // frontale
+        brick_at(m, studs[0], 0, stud_pitch * (studs[1] - m), 0, height = h);     // posteriore
+        brick_at(1, studs[1] - 2 * m, 0, stud_pitch * m, 0,
+                 rot = 90, height = h);                                          // sinistro
+        brick_at(1, studs[1] - 2 * m, stud_pitch * (studs[0] - 1), stud_pitch * m, 0,
+                 rot = 90, height = h);                                          // destro
+    }
+    // Campo tasti: copre tutta la piastra se margin_studs = 0
+    key_floor(studs[1] - 2 * m,
+              (m > 0 ? studs[0] - 2 : studs[0]),
+              m > 0 ? stud_pitch : 0,
+              stud_pitch * m,
+              h);
+}
+
+// Campo tasti: mattoncino a fondo aperto SENZA tasselli (matrice tutta
+// '.') e senza perni interni: sopra pulito per switch e tasti, sotto
+// attacco femmina (pareti + spline), cava libera per il corpo switch.
+module key_floor(mid_w, mid_l, cx, cy, h) {
+    rot = mid_l >= mid_w ? 0 : 90;
+    no_studs = chr([ for (k = [0 : mid_w * mid_l - 1]) 46 ]); // tutta '.'
+    brick_at(mid_w, mid_l, cx, cy, 0,
+             rot = rot, height = h,
+             stud_matrix = no_studs, matrix_columns = max(mid_w, mid_l),
+             posts = false);
 }
 
 // Fori dei tasti: attraversano piastra ed eventuali tasselli residui
@@ -190,21 +184,6 @@ module key_previews() {
 }
 
 // Esempio di pareti a mattoncini: si agganciano ai tasselli del bordo.
-// I block() di LEGO.scad sono centrati su XY: per posizionare l'angolo di
-// un mattoncino su (cx, cy) in coordinate piastra serve translate di
-// (+meta' della SUA lunghezza, +meta' della SUA larghezza).
-module brick_at(width, length, cx, cy, z, rot = 0) {
-    // LEGO.scad disegna sempre il lato lungo del mattoncino lungo X
-    // (width/length vengono normalizzati): con rot=90 il mattoncino corre
-    // lungo Y. (width, length) = dimensioni logiche del mattoncino.
-    oL = max(width, length) * stud_pitch - 2 * wall_play;
-    oW = min(width, length) * stud_pitch - 2 * wall_play;
-    translate(rot == 0 ? [ cx + oL / 2, cy + oW / 2, z ]
-                       : [ cx + oW / 2, cy + oL / 2, z ])
-        rotate([0, 0, rot])
-            block(width = width, length = length, height = 1, stud_rescale = stud_rescale);
-}
-
 module example_walls() {
     z = plate_th + stud_h; // i mattoncini poggiano sopra i tasselli
     // Parete frontale (2 tasselli di profondita', righe 0-1)
@@ -215,9 +194,9 @@ module example_walls() {
     brick_at(1, studs[1] - 4, 0, 2 * stud_pitch, z, rot = 90);
     // Parete destra
     brick_at(1, studs[1] - 4, stud_pitch * (studs[0] - 1), 2 * stud_pitch, z, rot = 90);
-    // Mattoncino agganciato SOTTO la piastra (attacco femmina):
-    // il suo top entra nella cava del fondo aperto, base a z = -plate_th.
-    brick_at(2, studs[0], 0, 0, -plate_th);
+    // Mattoncino standard agganciato SOTTO la piastra (attacco femmina):
+    // il suo top entra nelle cave del fondo aperto, base a z = -9.6.
+    brick_at(2, studs[0], 0, 0, -brick_unit_th);
 }
 
 // ------------------------------------------------------------------
