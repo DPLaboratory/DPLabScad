@@ -6,7 +6,7 @@ esportato da [editor.keyboard-tools.xyz](https://editor.keyboard-tools.xyz/).
 Il progetto si basa sulla libreria [LEGO.scad](https://github.com/cfinke/LEGO.scad)
 (Christopher Finke, MIT), vendorsa in `LEGO.scad`.
 
-![anteprima](preview.png)
+![anteprima](img/preview.png)
 
 ## File
 
@@ -128,4 +128,4 @@ supporti.
 
 ## Vista dall'alto
 
-![top](top2.png)
+![top](img/top2.png)

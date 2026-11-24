@@ -15,6 +15,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$ImgDir = Join-Path $PSScriptRoot "img"
+New-Item -ItemType Directory -Force -Path $ImgDir | Out-Null
 
 # 1. Converte il layout JSON in keyboard_layout.scad
 #    (uno script .ps1 non imposta $LASTEXITCODE: gli errori si propagano da soli)
@@ -22,7 +24,7 @@ $ErrorActionPreference = "Stop"
 
 # 2. Anteprima PNG
 & $OpenScad --autocenter --viewall --imgsize=1200,800 `
-    -o (Join-Path $PSScriptRoot "preview.png") (Join-Path $PSScriptRoot "LegoPlate.scad")
+    -o (Join-Path $PSScriptRoot "img\preview.png") (Join-Path $PSScriptRoot "LegoPlate.scad")
 if ($LASTEXITCODE -ne 0) { throw "Anteprima fallita" }
 
 # 3. STL su richiesta
