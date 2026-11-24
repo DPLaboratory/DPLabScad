@@ -1,7 +1,12 @@
-# KeyLego — LegoPlate.scad
+# KeyLego — tastiera LEGO (LegoPlate.scad + keyCaps.scad)
 
-Piastra per tastiera **compatibile LEGO** generata a partire dal layout JSON
-esportato da [editor.keyboard-tools.xyz](https://editor.keyboard-tools.xyz/).
+Progetto tastiera **compatibile LEGO**:
+
+- **`LegoPlate.scad`** — piastra per tastiera generata dal layout JSON
+  esportato da [editor.keyboard-tools.xyz](https://editor.keyboard-tools.xyz/):
+  tasselli LEGO sul bordo, attacco femmina sotto, aperture per gli switch.
+- **`keyCaps.scad`** — keycap compatibili Cherry MX con attacco **LEGO
+  maschio** sulla faccia superiore: ogni tasto riceve mattoncini LEGO.
 
 Il progetto si basa sulla libreria [LEGO.scad](https://github.com/cfinke/LEGO.scad)
 (Christopher Finke, MIT), vendorsa in `LEGO.scad`.
@@ -12,12 +17,16 @@ Il progetto si basa sulla libreria [LEGO.scad](https://github.com/cfinke/LEGO.sc
 
 | File | Descrizione |
 | --- | --- |
-| `LegoPlate.scad` | Modello principale (piastra + aperture tasti + pareti di esempio) |
+| `LegoPlate.scad` | Piastra: apertura tasti, anello tasselli, pareti di esempio |
+| `keyCaps.scad` | Keycap Cherry MX + tasselli LEGO sopra |
 | `LEGO.scad` | Libreria mattoncini LEGO (vendored) |
 | `keyboard_layout.json` | Layout tastiera (formato KLE / keyboard-tools) |
 | `layout_to_scad.ps1` | Converte il JSON in `keyboard_layout.scad` |
-| `build.ps1` | Rigenera il layout ed esporta PNG/STL |
+| `build.ps1` | Rigenera il layout ed esporta PNG/STL della piastra |
 | `keyboard_layout.scad` | **Generato** — dati tasti `[x, y, w, h]` in 1u |
+| `keyCaps.json` | Preset Customizer per i keycap (usabile con `-p`/`-P`) |
+| `keycap_set.stl` | STL di esempio del set di keycap |
+| `img/` | Render di esempio |
 
 > Nota: la build di OpenSCAD installata (2026.11-RC0) non ha la funzione
 > `import()` per i JSON (feature da snapshot di sviluppo), quindi il layout
@@ -108,7 +117,56 @@ brick_at(2, studs[0], 0, 8*(studs[1]-2), plate_th + 1.8); // parete posteriore (
 brick_at(2, studs[0], 0, 0, -plate_th);                   // mattoncino agganciato sotto
 ```
 
-## Stampa 3D senza supporti
+## KeyCaps — keycap Cherry MX con attacco LEGO
+
+`keyCaps.scad` genera keycap con **stem Cherry MX** sotto (cilindro cavo
+Ø 5.6, croce 4.15 × 1.35, profondità 3.3, tolleranza 0.05) e **tasselli
+LEGO standard** sopra (Ø 4.8 × 1.8, passo 8): ogni tasto si comporta come la
+faccia superiore di un mattoncino.
+
+![keycap](img/keycap_single.png)
+
+- Tasselli per keycap: 1u → **2×2**, 1.5u → 3×2, 2u → 4×2 (griglia centrata,
+  margine `lego_margin` dal ciglio, `lego_rescale` per la stampante)
+- Corpo: pareti 1.4, angoli arrotondati, bordo superiore `round`/`chamfer`
+  (`edge_style`), altezza corpo `cap_h` (totale 6.8 mm per 1u)
+- **Faccia superiore piana**: `dish_depth = 0` (assert incluso — i tasselli
+  devono poggiare sul piano)
+- Testo opzionale: `text_mode = "none" | "flat" | "engraved"`, legende a due
+  righe con il separatore `|`; con i tasselli il `flat` può sovrapporvisi
+- Stampa **stem in basso** senza supporti: lo stem sorregge il tetto (ponti
+  brevi) e la croce resta libera
+
+Modalità:
+
+- `build_mode = "single"` — un keycap con `key_text` e `key_u`
+- `build_mode = "set"` — un keycap per ogni elemento di `keys`
+  (`"Q"`, `["Tab", 1.5]`, `["Esc", 1.25, 4.5]`), griglia `set_cols` × righe,
+  con ponticelli `link_mode = "rows" | "grid"` che saldano le basi delle
+  pareti al livello del piatto (si tagliano via dopo la stampa)
+
+![set](img/keycap_set.png)
+
+Ponticelli di aderenza al piatto tra i keycap del set:
+
+![links](img/keycap_links.png)
+
+I parametri si regolano dal Customizer; il preset `keyCaps.json`
+("Nuovo insieme 1") imposta già `build_mode = "set"`:
+
+```powershell
+# set col preset salvato
+C:\Users\debora.presti\Software\OpenSCAD\openscad.com -p keyCaps.json -P "Nuovo insieme 1" -o keycap_set.stl keyCaps.scad
+
+# singolo keycap (anteprima PNG)
+C:\Users\debora.presti\Software\OpenSCAD\openscad.com --camera=0,0,0,55,0,300,90 --imgsize=900,650 -o img\keycap_single.png keyCaps.scad
+```
+
+Da CLI il valore stringa va protetto dall'escaping di PowerShell:
+`-D 'build_mode=\"set\"'` (con le virgolette, altrimenti OpenSCAD riceve
+`build_mode=set` e lo ignora).
+
+## Stampa 3D senza supporti (piastra)
 
 Con `field_bottom = "solid"` (default) la piastra si stampa **così com'è
 orientata nel modello** — fondo aperto in basso, tasselli in alto — senza
