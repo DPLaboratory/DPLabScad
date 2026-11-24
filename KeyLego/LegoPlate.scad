@@ -21,6 +21,11 @@
  *   - aperture per i tasti: fori da 14 mm per switch MX, vani completi
  *     per ogni tasto, oppure piastra piena senza fori.
  *
+ *  Stampa 3D: con field_bottom="solid" (default) il modello, orientato
+ *  come da coordinate (fondo aperto in basso, tasselli in alto), si
+ *  stampa SENZA supporti: l'unico ponte e' il soffitto delle cave
+ *  dell'anello (gap di 3-4 mm fra pin/perni e pareti).
+ *
  *  Geometria di ogni tasto: [x, y, w, h] in unita' (1u), generata da
  *  layout_to_scad.ps1 a partire dal JSON KLE: stringhe = tasti 1x1,
  *  {"w":n} / {"h":n} / {"x":n} = dimensioni e sfasamenti (le proprieta'
@@ -51,6 +56,10 @@ opening = "switch"; // [switch:Foro switch MX, keywell:Vano completo del tasto, 
 switch_opening = 14.1;
 // Cornice perimetrale di ogni tasto, solo per keywell, in mm
 key_frame = 1.2;
+// Fondo del campo tasti: "solid" = stampa senza supporti (la femmina
+// resta sotto l'anello di bordo); "open" = femmina anche sotto il campo
+// tasti, ma la stampa richiede i supporti
+field_bottom = "solid"; // [solid:Pieno - no supporti, open:Fondo aperto femmina - con supporti]
 
 /* [LEGO] */
 // Riscala solo i tasselli per compensare la stampante (1.05 = +5%)
@@ -150,23 +159,38 @@ module lego_plate() {
                  rot = 90, height = h);                                          // destro
     }
     // Campo tasti: copre tutta la piastra se margin_studs = 0
-    key_floor(studs[1] - 2 * m,
-              (m > 0 ? studs[0] - 2 : studs[0]),
+    key_floor(m > 0 ? studs[0] - 2 : studs[0],
+              studs[1] - 2 * m,
               m > 0 ? stud_pitch : 0,
               stud_pitch * m,
               h);
 }
 
-// Campo tasti: mattoncino a fondo aperto SENZA tasselli (matrice tutta
-// '.') e senza perni interni: sopra pulito per switch e tasti, sotto
-// attacco femmina (pareti + spline), cava libera per il corpo switch.
-module key_floor(mid_w, mid_l, cx, cy, h) {
-    rot = mid_l >= mid_w ? 0 : 90;
-    no_studs = chr([ for (k = [0 : mid_w * mid_l - 1]) 46 ]); // tutta '.'
-    brick_at(mid_w, mid_l, cx, cy, 0,
-             rot = rot, height = h,
-             stud_matrix = no_studs, matrix_columns = max(mid_w, mid_l),
-             posts = false);
+// Campo tasti.
+// field_bottom = "solid": piano pieno, la piastra si stampa senza
+//   supporti (attacco femmina solo sotto l'anello di bordo, che e' comunque
+//   l'unica zona utilizzabile con gli switch montati).
+// field_bottom = "open": mattoncino a fondo aperto su tutta la piastra
+//   (attacco femmina ovunque, senza tasselli ne' perni), ma il soffitto in
+//   ponte sul campo richiede i supporti in stampa.
+// NB saldatura: le parti LEGO sono giustapposte con 0.2 mm di gioco: il
+// piano invadde di 0.5 mm le pareti interne dell'anello cosi' il tutto
+// esce dalla stampa come pezzo unico e non come 5 pezzi staccati.
+module key_floor(mid_l, mid_w, cx, cy, h) {
+    if (field_bottom == "open") {
+        rot_full = studs[0] >= studs[1] ? 0 : 90;
+        no_studs = chr([ for (k = [0 : studs[0] * studs[1] - 1]) 46 ]); // tutta '.'
+        brick_at(studs[1], studs[0], 0, 0, 0, rot = rot_full, height = h,
+                 stud_matrix = no_studs,
+                 matrix_columns = max(studs[0], studs[1]),
+                 posts = false);
+    } else {
+        weld = margin_studs > 0 ? 0.5 : 0;
+        translate([ cx - weld, cy - weld, 0 ])
+            cube([ mid_l * stud_pitch - 2 * wall_play + 2 * weld,
+                   mid_w * stud_pitch - 2 * wall_play + 2 * weld,
+                   plate_th ]);
+    }
 }
 
 // Fori dei tasti: attraversano piastra ed eventuali tasselli residui

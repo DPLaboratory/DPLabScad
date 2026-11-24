@@ -49,10 +49,13 @@ Il convertitore gestisce la semantica KLE: stringhe = tasti 1×1;
 - **SOPRA — tasselli solo al bordo**: gli anelli hanno i tasselli solo sul
   bordo; il campo tasti è privo di tasselli, così switch e tasti non
   incontrano ostacoli.
-- **SOTTO — attacco femmina ovunque**: ogni parte è un mattoncino a fondo
+- **SOTTO — attacco femmina**: anello e campo tasti sono mattoncini a fondo
   aperto (cava con pareti e spline). Negli anelli ci sono anche pin/perni
-  come nel fondo dei mattoncini originali; nel campo tasti la cava è senza
-  perni apposta per lasciar passare il corpo degli switch.
+  come nel fondo dei mattoncini originali. Con `field_bottom = "solid"`
+  (default, consigliato) il campo tasti è pieno: la femmina resta sotto
+  l'anello — l'unica zona utilizzabile comunque, perché con gli switch
+  montati sotto il campo non c'è spazio per mattoncini. Con
+  `field_bottom = "open"` la femmina arriva anche sotto il campo tasti.
 - Aperture tasti (parametro `opening`):
   - `switch` — foro `switch_opening` (14.1 mm) centrato sul tasto, per switch MX;
   - `keywell` — vano completo del tasto con cornice `key_frame`;
@@ -71,6 +74,8 @@ Il convertitore gestisce la semantica KLE: stringhe = tasti 1×1;
 - `margin_studs` — anello di tasselli attorno alla zona tastiera (default 1)
 - `plate_th` — spessore piastra in mm, min 3.2 (default 3.2)
 - `opening` — `switch` | `keywell` | `none`
+- `field_bottom` — `solid` (default, stampa senza supporti) | `open`
+  (femmina anche sotto il campo tasti, richiede supporti)
 - `stud_rescale` — correzione del diametro dei tasselli per la stampante
 - `show_layout_preview` — anteprima trasparente dei tasti (solo F5)
 - `show_example_walls` — mattoncini di esempio sopra (pareti) e sotto la piastra
@@ -102,6 +107,24 @@ brick_at(2, studs[0], 0, 0, plate_th + 1.8);              // parete frontale (so
 brick_at(2, studs[0], 0, 8*(studs[1]-2), plate_th + 1.8); // parete posteriore (sopra)
 brick_at(2, studs[0], 0, 0, -plate_th);                   // mattoncino agganciato sotto
 ```
+
+## Stampa 3D senza supporti
+
+Con `field_bottom = "solid"` (default) la piastra si stampa **così com'è
+orientata nel modello** — fondo aperto in basso, tasselli in alto — senza
+supporti:
+
+- il campo tasti è un piano pieno poggiato sul piatto: niente ponti;
+- le uniche ponticellature sono i soffitti delle cave dell'anello, con gap
+  di 3-4 mm fra pin/perni e pareti (ben dentro le capacità di qualsiasi slicer);
+- le aperture switch sono fori passanti verticali, nessun ostacolo;
+- le parti sono saldate fra loro (il campo tasti invadde di 0,5 mm le pareti
+  interne degli anelli): la stampa esce in **un pezzo unico**, non in 5 pezzi
+  giustapposti.
+
+Con `field_bottom = "open"` l'attacco femmina arriva anche sotto il campo
+tasti, ma il soffitto del campo (~80×95 mm) andrebbe in ponte: servono i
+supporti.
 
 ## Vista dall'alto
 
