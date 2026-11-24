@@ -19,6 +19,7 @@ Il progetto si basa sulla libreria [LEGO.scad](https://github.com/cfinke/LEGO.sc
 | --- | --- |
 | `LegoPlate.scad` | Piastra: apertura tasti, anello tasselli, pareti di esempio |
 | `keyCaps.scad` | Keycap Cherry MX + tasselli LEGO sopra |
+| `LegoPCB.scad` | Mattoncino portamicrocontrollore (Arduino / Pico / ESP32) |
 | `LEGO.scad` | Libreria mattoncini LEGO (vendored) |
 | `keyboard_layout.json` | Layout tastiera (formato KLE / keyboard-tools) |
 | `layout_to_scad.ps1` | Converte il JSON in `keyboard_layout.scad` |
@@ -156,15 +157,44 @@ I parametri si regolano dal Customizer; il preset `keyCaps.json`
 
 ```powershell
 # set col preset salvato
-C:\Users\debora.presti\Software\OpenSCAD\openscad.com -p keyCaps.json -P "Nuovo insieme 1" -o keycap_set.stl keyCaps.scad
+.\openscad.com -p keyCaps.json -P "Nuovo insieme 1" -o keycap_set.stl keyCaps.scad
 
 # singolo keycap (anteprima PNG)
-C:\Users\debora.presti\Software\OpenSCAD\openscad.com --camera=0,0,0,55,0,300,90 --imgsize=900,650 -o img\keycap_single.png keyCaps.scad
+.\openscad.com --camera=0,0,0,55,0,300,90 --imgsize=900,650 -o img\keycap_single.png keyCaps.scad
 ```
 
 Da CLI il valore stringa va protetto dall'escaping di PowerShell:
 `-D 'build_mode=\"set\"'` (con le virgolette, altrimenti OpenSCAD riceve
 `build_mode=set` e lo ignora).
+
+## LegoPCB — mattoncino portamicrocontrollore
+
+`LegoPCB.scad` genera un mattoncino LEGO (femmina sotto, tasselli sopra) che
+fa da **incastro per una PCB** (Raspberry Pi Pico, Arduino Nano, ESP32 o
+dimensioni personalizzate):
+
+![legopcb](img/legopcb_iso.png)
+
+- **Vano ad innesto dall'alto**: tasca sagomata sulla PCB (gioco `fit_clear`,
+  spazio sotto per le saldature `under_clear`) con **labbri di blocco**
+  perimetrali (`lip`): la PCB scatta sotto il bordo e resta bloccata
+- **Porta USB**: finestra passante sul lato corto (`port = "usbc" | "microusb"
+  | "custom" | "none"`, lato `port_side = "front" | "back"`); i pin
+  dell'attacco femmina che cadrebbero nella finestra vengono omessi
+  automaticamente
+- **Stessa architettura di LegoPlate**: anello di mattoncini a fondo aperto
+  (femmina sotto, tasselli sopra) + pozzetto pieno → **stampa senza supporti**
+  orientato come da modello
+- Parametri principali: `pcb` (preset o `custom` con `pcb_l_c/w_c/t_c`),
+  `port*`, `fit_clear`, `under_clear`, `top_clear`, `lip`, `well_frame`,
+  `margin_studs`, `plate_th`
+
+```powershell
+# anteprima
+.\openscad.com --camera=40,24,0,55,0,300,150 --imgsize=1000,700 -o img\legopcb_iso.png LegoPCB.scad
+# STL
+.\openscad.com -o LegoPCB.stl LegoPCB.scad
+```
 
 ## Stampa 3D senza supporti (piastra)
 

@@ -10,7 +10,7 @@
 
 param(
     [string]$JsonPath = (Join-Path $PSScriptRoot "keyboard_layout.json"),
-    [string]$OpenScad = "C:\Users\debora.presti\Software\OpenSCAD\openscad.com",
+    [string]$OpenScad = "openscad.com",
     [switch]$Stl
 )
 
