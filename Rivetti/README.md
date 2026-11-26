@@ -138,7 +138,7 @@ Apri `rivetti.scad` in OpenSCAD e usa il **customizer** (menu a tendina per `tip
 e `parte`, slider per le misure), oppure da riga di comando:
 
 ```powershell
-$osc = "C:\Users\debora.presti\Software\OpenSCAD\openscad.exe"
+$osc = "openscad.exe"
 
 # STL del maschio tipo "vite" per un pannello da 6 mm
 & $osc -o "stl\rivetto-vite-maschio.stl" -D 'tipo=\"vite\"' -D 'parte=\"maschio\"' -D 'spessore_pannello=6' rivetti.scad
