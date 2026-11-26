@@ -50,6 +50,30 @@ denti sulla faccia ripida → non si sfila; per smontare va forzato.
 
 ![Sezione: denti ingranati nei petali](render/rivetto-vite-sezione.png)
 
+## Piastra di stampa — array di rivetti
+
+Con `parte = "piastra"` il file genera un **array di rivetti completi** (maschio + femmina
+per cella, `piastra_colonne` × `piastra_righe`) uniti da una **griglia di supporto**
+sottile, come i kit di modellismo:
+
+![Piastra di stampa 3x2](render/rivetto-vite-piastra.png)
+
+La griglia (traversaie + punti di collegamento) ha uno spessore di 1–2 strati
+(`spessore_supporto`, default 0,4 mm) e una grande superficie a contatto col piatto:
+garantisce l'**adesione** anche ai rivetti piccoli e li tiene ancorati durante la stampa.
+
+**Rimozione**: a stampa finita si piega/twista la griglia e i punti di collegamento
+(si staccano al bordo delle flangie, lasciando un piccolo segno levigabile). Ogni cella
+restituisce un rivetto completo con le sue due parti.
+
+| Parametro | Default | Significato |
+|-----------|---------|-------------|
+| `piastra_colonne` | 3 | colonne di rivetti |
+| `piastra_righe` | 2 | righe di rivetti |
+| `distanza_rivetti` | 4 | distanza tra i rivetti (corridoio della griglia) |
+| `spessore_supporto` | 0.4 | spessore della griglia (1–2 strati) |
+| `larghezza_collegamento` | 1.2 | larghezza dei punti di stacco (piccoli = facili da staccare) |
+
 ---
 
 ## Parametri principali
@@ -57,7 +81,7 @@ denti sulla faccia ripida → non si sfila; per smontare va forzato.
 | Parametro | Default | Significato |
 |-----------|---------|-------------|
 | `tipo` | `"vite"` | `scatto` oppure `vite` |
-| `parte` | `"assemblato"` | vista da generare: `maschio`, `femmina`, `assemblato`, `sezione`, `stampa` |
+| `parte` | `"assemblato"` | vista da generare: `maschio`, `femmina`, `assemblato`, `sezione`, `stampa`, `piastra` |
 | `diametro_testa` | 11.5 | diametro della flangia |
 | `spessore_testa` | 1.3 | spessore della flangia |
 | `d_nominale` | 3 | a scatto: foro nel pannello — a vite: diametro nominale del perno (M3) |
@@ -91,14 +115,18 @@ render/                         anteprime di tutte le viste
 stl/
   rivetto-scatto-maschio.stl    parte maschio (a scatto)
   rivetto-scatto-femmina.stl    parte femmina (a scatto)
+  rivetto-scatto-piastra.stl    piastra 3x2 con supporto (a scatto)
   rivetto-vite-maschio.stl      parte maschio (a perno dentato)
   rivetto-vite-femmina.stl      parte femmina (mozzo a petali)
+  rivetto-vite-piastra.stl      piastra 3x2 con supporto (a vite)
 ```
 
 ## Stampa 3D
 
 - Entrambe le parti si stampano **a flangia sul piatto** (vista `stampa`),
   **senza supporti**: il foro/dente della femmina si stampa in verticale.
+- Per i pezzi piccoli o piatti poco aderenti usa la vista `piastra`
+  (array unito dalla griglia di supporto, si stacca a stampa finita).
 - Materiale: **PETG o ABS** per l'elasticità dei linguotti/petali; PLA va bene
   per i prototipi.
 - In caso di avvitamento/inserto duro o molle: regola `d_sporgenza_denti`
@@ -115,6 +143,9 @@ $osc = "C:\Users\debora.presti\Software\OpenSCAD\openscad.exe"
 # STL del maschio tipo "vite" per un pannello da 6 mm
 & $osc -o "stl\rivetto-vite-maschio.stl" -D 'tipo=\"vite\"' -D 'parte=\"maschio\"' -D 'spessore_pannello=6' rivetti.scad
 
+# piastra 3x2 di rivetti a vite (perno lungo per pannelli da 6 mm)
+& $osc -o "stl\rivetto-vite-piastra.stl" -D 'tipo=\"vite\"' -D 'parte=\"piastra\"' -D 'spessore_pannello=6' rivetti.scad
+
 # anteprima in sezione del tipo a scatto
 & $osc -o "render\rivetto-scatto-sezione.png" --imgsize=1100,850 --autocenter --viewall `
     -D 'tipo=\"scatto\"' -D 'parte=\"sezione\"' rivetti.scad
@@ -129,6 +160,7 @@ quattro linguotti (scatto)    ->  n_tagli = 2;
 mozzo a 2 petali più rigido   ->  tagli_mozzo = 1;
 zigrinatura morbida (scatto)  ->  d_sporgenza_denti = 0.15;
 denti più mordenti (entrambi) ->  d_passo_denti = 0.7;  d_ripido_denti = 0.3;
+piastra più grande            ->  piastra_colonne = 5;  piastra_righe = 4;
 ```
 
 > **Nota**: nella vista `sezione` i denti del perno sembrano "penetrare" i petali del

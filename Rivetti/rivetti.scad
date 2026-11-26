@@ -26,7 +26,7 @@
 tipo = "vite"; // [scatto: a pressione, vite: filettato]
 
 // parte del rivetto da visualizzare o esportare in STL
-parte = "assemblato"; // [maschio, femmina, assemblato, sezione, stampa]
+parte = "assemblato"; // [maschio, femmina, assemblato, sezione, stampa, piastra]
 
 // mostra il pannello trasparente nelle viste "assemblato" e "sezione"
 mostra_pannello = true;
@@ -107,6 +107,23 @@ d_passo_denti = 0.9; // [0.5:0.1:3]
 
 // ripidezza della faccia di ritenuta, frazione del passo
 d_ripido_denti = 0.25; // [0.1:0.05:0.5]
+
+/* [Piastra di stampa (piu' rivetti)] */
+
+// colonne di rivetti completi (maschio + femmina) nella piastra
+piastra_colonne = 3; // [1:1:10]
+
+// righe di rivetti completi nella piastra
+piastra_righe = 2; // [1:1:10]
+
+// distanza tra un rivetto e l'altro (corridoio della griglia di supporto)
+distanza_rivetti = 4; // [2:0.5:15]
+
+// spessore della griglia di supporto (1-2 strati: si stacca piegandola)
+spessore_supporto = 0.4; // [0.2:0.05:1.2]
+
+// larghezza dei punti di collegamento (piccoli = facili da staccare)
+larghezza_collegamento = 1.2; // [0.6:0.1:3]
 
 /* [Valori calcolati] */
 
@@ -350,6 +367,70 @@ module stampa() {
         femmina();
 }
 
+// ------------------- piastra di stampa (array) ----------------------
+
+// punto di collegamento elastico tra una flangia e la traversa piu' vicina:
+// sottile per staccarlo facilmente, entra 1 mm nella flangia per
+// aderire bene anche alla base arrotondata
+module collegamento(px, py, r, x0, x1, y0, y1) {
+    sovrapp = min(1, r * 0.5);   // penetrazione nel bordo flangia
+    // traversa a sinistra
+    translate([x0 + 2 * larghezza_collegamento - 0.5, py - larghezza_collegamento / 2, 0])
+        cube([px - r + sovrapp - (x0 + 2 * larghezza_collegamento - 0.5),
+              larghezza_collegamento, spessore_supporto]);
+    // traversa a destra
+    translate([px + r - sovrapp, py - larghezza_collegamento / 2, 0])
+        cube([(x1 - 2 * larghezza_collegamento + 0.5) - (px + r - sovrapp),
+              larghezza_collegamento, spessore_supporto]);
+    // traversa in basso
+    translate([px - larghezza_collegamento / 2, y0 + 2 * larghezza_collegamento - 0.5, 0])
+        cube([larghezza_collegamento,
+              py - r + sovrapp - (y0 + 2 * larghezza_collegamento - 0.5),
+              spessore_supporto]);
+    // traversa in alto
+    translate([px - larghezza_collegamento / 2, py + r - sovrapp, 0])
+        cube([larghezza_collegamento,
+              (y1 - 2 * larghezza_collegamento + 0.5) - (py + r - sovrapp),
+              spessore_supporto]);
+}
+
+// piastra di stampa: array di rivetti completi (maschio + femmina per
+// cella) uniti da una griglia sottile di supporto. La griglia ha una
+// grande superficie di adesione sul piatto e si stacca piegandola: i
+// punti di collegamento si rompono al bordo delle flange.
+module piastra_stampa() {
+    offset_coppia = diametro_testa + d_colletto / 2 + 3;      // distanza centri m/f
+    larghezza_cella = offset_coppia + diametro_testa;         // contenuto della cella
+    px_pitch = larghezza_cella + distanza_rivetti;
+    py_pitch = diametro_testa + distanza_rivetti;
+    bw = 2 * larghezza_collegamento;                          // larghezza traversaie
+    lx = piastra_colonne * px_pitch;
+    ly = piastra_righe * py_pitch;
+    R = diametro_testa / 2;
+    union() {
+        // traversaie verticali sui confini delle colonne
+        for (k = [0 : piastra_colonne])
+            translate([k * px_pitch - bw / 2, -bw / 2, 0])
+                cube([bw, ly + bw, spessore_supporto]);
+        // traversaie orizzontali sui confini delle righe
+        for (k = [0 : piastra_righe])
+            translate([-bw / 2, k * py_pitch - bw / 2, 0])
+                cube([lx + bw, bw, spessore_supporto]);
+        // rivetti e punti di collegamento
+        for (cy = [0 : piastra_righe - 1], cx = [0 : piastra_colonne - 1]) {
+            x0 = cx * px_pitch;
+            y0 = cy * py_pitch;
+            mx = x0 + distanza_rivetti / 2 + R;
+            my = y0 + distanza_rivetti / 2 + R;
+            fx = mx + offset_coppia;
+            translate([mx, my, 0]) maschio();
+            translate([fx, my, 0]) femmina();
+            collegamento(mx, my, R, x0, x0 + px_pitch, y0, y0 + py_pitch);
+            collegamento(fx, my, R, x0, x0 + px_pitch, y0, y0 + py_pitch);
+        }
+    }
+}
+
 // ------------------------------ output ------------------------------
 
 if (parte == "maschio")            maschio();
@@ -357,6 +438,7 @@ else if (parte == "femmina")       femmina();
 else if (parte == "assemblato")    vista_assemblato();
 else if (parte == "sezione")       vista_sezione();
 else if (parte == "stampa")        stampa();
+else if (parte == "piastra")       piastra_stampa();
 
 // ------------------------------- note -------------------------------
 // Il tipo "vite" riprende img/rivetti2.webp: foro M3, pannelli 0-9 mm.
@@ -373,3 +455,4 @@ else if (parte == "stampa")        stampa();
 //   gambo pieno (scatto)    ->  d_foro_gambo = 0;
 //   quattro linguotti (scatto) ->  n_tagli = 2;
 //   zigrinatura morbida (scatto) ->  d_sporgenza_denti = 0.15;
+//   piastra 3x2 di rivetti      ->  parte = "piastra"; (colonne/righe nei parametri)
